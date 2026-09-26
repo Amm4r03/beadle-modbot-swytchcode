@@ -72,10 +72,32 @@ def counts(community_id: str):
     }
 
 
-@app.get("/api/events")
-def events(community_id: str, limit: int = Query(50, le=200)):
+@app.get("/api/communities")
+def communities():
     return rows(
-        """SELECT e.id AS event_id, e.platform, e.received_at, n.text, n.author_id,
+        """SELECT community_id, COUNT(*) AS events, MAX(received_at) AS last_event
+           FROM inbox_events GROUP BY community_id ORDER BY last_event DESC"""
+    )
+
+
+@app.get("/api/events")
+def events(community_id: str | None = None, limit: int = Query(50, le=200)):
+    if community_id:
+        return rows(
+            """SELECT e.id AS event_id, e.platform, e.received_at, n.text, n.author_id,
+                      d.verdict, d.band, d.confidence, d.reason,
+                      a.status AS card_status
+               FROM inbox_events e
+               LEFT JOIN normalized_events n ON n.event_id = e.id
+               LEFT JOIN decisions d ON d.event_id = e.id
+                 AND d.id = (SELECT MAX(id) FROM decisions WHERE event_id = e.id)
+               LEFT JOIN action_intents a ON a.event_id = e.id AND a.action_type = 'mod_queue_card'
+               WHERE e.community_id = ?
+               ORDER BY e.received_at DESC, e.id DESC LIMIT ?""",
+            (community_id, limit),
+        )
+    return rows(
+        """SELECT e.id AS event_id, e.community_id, e.platform, e.received_at, n.text, n.author_id,
                   d.verdict, d.band, d.confidence, d.reason,
                   a.status AS card_status
            FROM inbox_events e
@@ -83,9 +105,8 @@ def events(community_id: str, limit: int = Query(50, le=200)):
            LEFT JOIN decisions d ON d.event_id = e.id
              AND d.id = (SELECT MAX(id) FROM decisions WHERE event_id = e.id)
            LEFT JOIN action_intents a ON a.event_id = e.id AND a.action_type = 'mod_queue_card'
-           WHERE e.community_id = ?
            ORDER BY e.received_at DESC, e.id DESC LIMIT ?""",
-        (community_id, limit),
+        (limit,),
     )
 
 
