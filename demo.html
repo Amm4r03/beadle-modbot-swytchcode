@@ -32,6 +32,9 @@
   .DENY { color:var(--red); border-color:var(--red); }
   a { color:var(--accent); }
   .honest { border-left:3px solid var(--amber); padding-left:12px; color:var(--dim); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; margin:10px 0; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:left; vertical-align:top; }
+  th { color:var(--dim); font-weight:600; }
 </style>
 </head>
 <body>
@@ -77,7 +80,28 @@
     <p class="sub">Three distinct providers, each call's output feeding the next. Discord (OAuth) and Telegram (bundle bug) are documented blockers; Telegram runs on its direct Bot API and is never counted as Swytchcode-mediated.</p>
   </div>
 
-  <h2>5 · See it live</h2>
+  <h2>5 · Data schema — the ledger that makes it auditable</h2>
+  <div class="panel">
+    <p><b>data/state.db</b> (SQLite, WAL) — the durable ledger; the agent core is the single writer.</p>
+    <table>
+      <tr><th>Table</th><th>What it holds</th></tr>
+      <tr><td>inbox_events</td><td>Every observed event — dedupe key (community · platform · provider event id), state, attempts</td></tr>
+      <tr><td>normalized_events</td><td>The event contract: text, author, joined_at, occurred_at, channel, message id</td></tr>
+      <tr><td>signal_runs</td><td>Every signal's value + evidence + version per event (8 deterministic + 3 Jev)</td></tr>
+      <tr><td>decisions</td><td>verdict / band / confidence / reason + provenance: prompt version &amp; hash, model, norm version, result status</td></tr>
+      <tr><td>event_transitions</td><td>Append-only state trail: from → to, one-line reason, timestamp (the reason chain)</td></tr>
+      <tr><td>action_intents</td><td>Outbox: action type, status, idempotency key, provider refs (Swytchcode run ids)</td></tr>
+      <tr><td>overrides</td><td>Admin resolutions — the labeled examples the learning loop cites</td></tr>
+      <tr><td>threshold_versions</td><td>Versioned gate policy bundles (bands are config, not code)</td></tr>
+      <tr><td>token_usage</td><td>LLM calls: provider, model, workflow, input/output tokens</td></tr>
+      <tr><td>audit</td><td>Actor/action/detail rows for admin and system actions</td></tr>
+      <tr><td>learned_config</td><td>Per-community learned preferences (portable JSON, exportable)</td></tr>
+    </table>
+    <p><b>data/checkpoints.db</b> — LangGraph checkpoints (disposable; every decision is replayable from the ledger).</p>
+    <p class="sub">Read surface: <code>/api/communities/{id}/counts</code> · <code>/api/events</code> · <code>/api/decisions/{event}</code> · <code>/api/trace/{event}</code> · <code>/api/metrics</code> · <code>/api/usage</code> · <code>/api/prompts</code> · SSE <code>/api/stream</code> · write: <code>POST /api/ingest</code> · <code>POST /api/quarantine/{event}/resolve</code></p>
+  </div>
+
+  <h2>6 · See it live</h2>
   <div class="panel">
     <p><a href="http://localhost:8788/live">/live</a> — live agent view: metrics, prompts, event trails, mock chat (send a message through the agent).</p>
     <p><a href="http://localhost:5173/admin">/admin</a> — admin console: counts, events, quarantine review, trace view.</p>
