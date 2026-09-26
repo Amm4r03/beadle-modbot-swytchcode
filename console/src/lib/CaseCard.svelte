@@ -16,7 +16,8 @@
 		AlertDialogDescription,
 		AlertDialogFooter,
 		AlertDialogHeader,
-		AlertDialogTitle
+		AlertDialogTitle,
+		AlertDialogTrigger
 	} from '$lib/components/ui/alert-dialog/index.js';
 	import { linkifyEvidence, thresholdFromReason, timeAgo } from '$lib/format';
 	import type { EventRow, Trace } from '$lib/api';
@@ -142,7 +143,9 @@
 						Edit label
 					</Button>
 					<AlertDialog>
-						<Button size="sm" variant="destructive" disabled={isBusy}>Deny</Button>
+						<AlertDialogTrigger>
+							<Button size="sm" variant="destructive" disabled={isBusy}>Deny</Button>
+						</AlertDialogTrigger>
 						<AlertDialogContent>
 							<AlertDialogHeader>
 								<AlertDialogTitle>Deny this case?</AlertDialogTitle>
