@@ -20,6 +20,7 @@ export interface EventRow {
 	band: string | null;
 	confidence: number | null;
 	reason: string | null;
+	card_status: string | null;
 }
 
 export interface Transition {
@@ -218,3 +219,32 @@ export interface PlatformInfo {
 export type Platforms = Record<string, PlatformInfo>;
 
 export const fetchPlatforms = (signal?: AbortSignal) => get<Platforms>('/api/platforms', signal);
+export interface AlertRow {
+	id: number;
+	actor: string;
+	action: string;
+	detail_json: string;
+	created_at: string;
+}
+
+export const fetchAlerts = (limit = 20, signal?: AbortSignal) =>
+	get<AlertRow[]>(`/api/alerts?limit=${limit}`, signal);
+
+export interface AlertDetail {
+	event_id?: string;
+	trigger?: string;
+	band?: string;
+	verdict?: string;
+	confidence?: number;
+	reason?: string;
+	resulting_action?: string;
+	reason_code?: string | null;
+}
+
+export function parseAlertDetail(row: AlertRow): AlertDetail {
+	try {
+		return JSON.parse(row.detail_json) as AlertDetail;
+	} catch {
+		return {};
+	}
+}
