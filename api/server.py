@@ -287,6 +287,26 @@ def announce(request: AnnounceRequest):
     return {"ok": True, "results": results}
 
 
+@app.get("/api/platforms")
+def platforms():
+    out: dict[str, dict] = {}
+    try:
+        from app.telegram_direct import TelegramDirect
+
+        me = TelegramDirect().get_me()
+        out["telegram"] = {"status": "connected", "detail": "@" + str(me.get("username", "?"))}
+    except Exception as error:
+        out["telegram"] = {"status": "error", "detail": str(error)[:80]}
+    out["slack"] = {"status": "connected" if os.environ.get("SLACK_CHANNEL_ID") else "missing", "detail": os.environ.get("SLACK_CHANNEL_ID", "")}
+    out["discord"] = {
+        "status": "connected" if os.environ.get("DISCORD_BOT_TOKEN") and os.environ.get("DISCORD_CHANNEL_ID") else "missing",
+        "detail": os.environ.get("DISCORD_CHANNEL_ID", ""),
+    }
+    out["notion"] = {"status": "connected" if os.environ.get("NOTION_PARENT_PAGE_ID") else "missing", "detail": os.environ.get("NOTION_PARENT_PAGE_ID", "")}
+    out["resend"] = {"status": "connected" if os.environ.get("RESEND_API_KEY") else "missing", "detail": os.environ.get("DIGEST_TO", "")}
+    return out
+
+
 @app.get("/test")
 def test_view():
     return FileResponse(ROOT / "api" / "test.html")
