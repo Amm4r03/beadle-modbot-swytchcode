@@ -6,10 +6,12 @@
 	let {
 		events,
 		now,
+		showCommunity = false,
 		emptyLabel = 'No events yet.'
 	}: {
 		events: EventRow[] | null;
 		now: number;
+		showCommunity?: boolean;
 		emptyLabel?: string;
 	} = $props();
 </script>
@@ -33,6 +35,7 @@
 							</span>
 							<span class="block text-xs text-muted-foreground tabular-nums">
 								{ev.event_id} · {ev.author_id ?? 'unknown'} · {ageMinutes(ev.received_at, now)} old
+								{#if showCommunity && ev.community_id}· {ev.community_id}{/if}
 							</span>
 						</span>
 						<StatusChip band={ev.band} verdict={ev.verdict} />
