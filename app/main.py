@@ -1,4 +1,6 @@
 import json
+import re
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -12,10 +14,24 @@ from app.state import now
 FIXTURE = Path("fixtures/maple_nest/telegram_messages.json")
 
 
+def _joined_at(message: dict, occurred_at: str) -> str:
+    if message.get("joined_at"):
+        return message["joined_at"]
+    meta = message.get("from_meta", "")
+    match = re.search(r"joined (\d{4}-\d{2}-\d{2})", meta)
+    if match:
+        return f"{match.group(1)}T09:00:00+05:30"
+    match = re.search(r"joined (\d+) (day|hour)s? ago", meta)
+    if match:
+        delta = timedelta(days=int(match.group(1))) if match.group(2) == "day" else timedelta(hours=int(match.group(1)))
+        return (datetime.fromisoformat(occurred_at) - delta).isoformat()
+    return "2026-05-19T09:00:00+05:30"
+
+
 def fixture_event(role: str = "genuine_member_question") -> dict:
     data = json.loads(FIXTURE.read_text())
     message = next(m for m in data["live_pair"] if m["role"] == role)
-    joined = "2026-09-18T09:00:00+05:30" if "lurker" in message.get("from_meta", "") else "2026-05-19T09:00:00+05:30"
+    occurred = "2026-09-26T12:10:00+05:30"
     return {
         "event_id": f"tg-demo-{message['id'].lower()}",
         "platform": "telegram",
@@ -23,9 +39,9 @@ def fixture_event(role: str = "genuine_member_question") -> dict:
         "channel_id": "-1001234567890",
         "message_id": message["id"],
         "author_id": message["from"],
-        "author_joined_at": joined,
+        "author_joined_at": _joined_at(message, occurred),
         "text": message["text"],
-        "occurred_at": "2026-09-26T12:10:00+05:30",
+        "occurred_at": occurred,
     }
 
 

@@ -133,6 +133,7 @@
       "ts": "DEMO T+0",
       "from": "priya_grows",
       "from_meta": "lurker, 0 prior posts, joined 2026-09-18",
+      "joined_at": "2026-09-18T09:00:00+05:30",
       "text": "hey! my balcony tomatoes got these yellow spots after the rain last week — anyone dealt with this? pics in thread 🙏",
       "thread_replies": [
         {
@@ -147,6 +148,7 @@
       "ts": "DEMO T+8s",
       "from": "MapleNest_Admin",
       "from_meta": "joined 2 days ago, 0 prior posts, handle mimics real mod naming",
+      "joined_at": "2026-09-24T12:10:00+05:30",
       "text": "URGENT: MapleNest is migrating! Verify your wallet to keep your membership + claim 50 MAPLE tokens 👉 maplenest-verify[.]xyz"
     },
     {
@@ -156,6 +158,7 @@
       "ts": "DEMO raid beat",
       "from": "maplenest.support",
       "from_meta": "joined 6 hours ago, 0 prior posts, dotted handle (new impersonation style, not underscore)",
+      "joined_at": "2026-09-26T06:10:00+05:30",
       "text": "Hi gardeners 🌿 we're doing a quick member survey — first 50 responses get a free premium soil testing kit. Just connect your wallet at maplenest-rewards[.]xyz to confirm you're human",
       "framing": "different lure (reward, not migration), different handle style (dots, not underscore), same verdict — proves the gate generalizes"
     },
@@ -166,6 +169,7 @@
       "ts": "DEMO raid beat fallback",
       "from": "Maple_Nest_Official",
       "from_meta": "joined 1 day ago, 0 prior posts",
+      "joined_at": "2026-09-25T12:10:00+05:30",
       "text": "Important: Telegram is deleting inactive gardening groups. Admins must re-verify the group here within 24h or MapleNest gets archived: t[.]me-verify-maplenest[.]xyz — please forward to all members",
       "framing": "platform-threat lure (fear, not greed); backup if R1 under-scores"
     }
