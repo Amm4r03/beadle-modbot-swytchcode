@@ -10,7 +10,6 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import {
 		AlertDialog,
-		AlertDialogAction,
 		AlertDialogCancel,
 		AlertDialogContent,
 		AlertDialogDescription,
@@ -39,6 +38,7 @@
 	} = $props();
 
 	let editing = $state(false);
+	let denyOpen = $state(false);
 	let label = $state('');
 
 	const latest = $derived(trace?.decisions?.[0] ?? null);
@@ -143,7 +143,7 @@
 					>
 						Edit label
 					</Button>
-					<AlertDialog>
+					<AlertDialog bind:open={denyOpen}>
 						<AlertDialogTrigger>
 							<Button size="sm" variant="destructive" disabled={isBusy}>Deny</Button>
 						</AlertDialogTrigger>
@@ -156,9 +156,17 @@
 							</AlertDialogHeader>
 							<AlertDialogFooter>
 								<AlertDialogCancel>Cancel</AlertDialogCancel>
-								<AlertDialogAction onclick={() => onResolve(event.event_id, 'deny')}>
+								<Button
+									size="sm"
+									variant="destructive"
+									disabled={isBusy}
+									onclick={() => {
+										denyOpen = false;
+										onResolve(event.event_id, 'deny');
+									}}
+								>
 									Deny and record
-								</AlertDialogAction>
+								</Button>
 							</AlertDialogFooter>
 						</AlertDialogContent>
 					</AlertDialog>
@@ -173,7 +181,7 @@
 					>
 						<input
 							class="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm"
-							placeholder="Corrected label + short reason"
+							placeholder="Type a corrected label to enable Save"
 							bind:value={label}
 							disabled={isBusy}
 							aria-label="Corrected label"
