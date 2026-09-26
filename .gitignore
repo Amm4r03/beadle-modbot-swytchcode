@@ -21,6 +21,17 @@ docs/research-v2-final-candidates.md
 docs/herdr-comms/
 docs/archive/
 
+# --- node (console/) ---
+node_modules/
+.svelte-kit/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
 # --- python ---
 __pycache__/
 *.py[cod]
