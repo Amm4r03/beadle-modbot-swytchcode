@@ -127,7 +127,7 @@ def check_answerable(question: str, passages: list[dict]) -> dict:
         return {"answerable_p": None, "model_id": MODEL, "error": f"{type(error).__name__}: {str(error)[:120]}"}
 
 
-def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
+def reduce_gate(jev_result: dict, knowledge: dict | None = None, signals: list | None = None) -> dict:
     scores = jev_result.get("scores", {})
     scam_p = scores.get("solicitation")
     question_p = scores.get("question_shape")
@@ -135,6 +135,7 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     threat_p = scores.get("threat_or_harm")
     knowledge = knowledge or {}
     knowledge_ok = (knowledge.get("answerable_p") or 0) >= 0.70 and (knowledge.get("internal_p") or 0) >= 0.50
+    rule_threat = any(s.get("id") == "threat_terms" and s.get("value") == "TRUE" for s in (signals or []))
     if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None or threat_p is None:
         return {
             "verdict": "review",
@@ -144,7 +145,10 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
             "scores": scores,
             "model_id": jev_result.get("model_id"),
         }
-    if threat_p >= 0.70:
+    if rule_threat:
+        verdict, band = "quarantine", "DRAFT"
+        reason = "gate: threat language detected (threat_terms) - quarantine for review"
+    elif threat_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: threat/harm probability {threat_p:.2f} at/above 0.70 - quarantine for review"
     elif scam_p >= 0.70:

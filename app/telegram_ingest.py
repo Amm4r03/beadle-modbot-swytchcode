@@ -61,8 +61,17 @@ def main() -> None:
                     bot.send_message(event["channel_id"], draft["text"], reply_to_message_id=reply_to)
                     print("   replied with drafted answer")
                 elif band == "DRAFT":
-                    bot.send_message(event["channel_id"], "Held for a human moderator — this one needs review.", reply_to_message_id=reply_to)
-                    print("   replied: held for review")
+                    if "threat" in decision.get("reason", ""):
+                        try:
+                            bot.delete_message(event["channel_id"], reply_to)
+                            print("   deleted the harmful message")
+                        except Exception as error:
+                            print(f"   delete failed (needs delete rights/admin): {error}")
+                        bot.send_message(event["channel_id"], "Removed for violating community rules - moderators notified.")
+                        print("   replied: removed for review")
+                    else:
+                        bot.send_message(event["channel_id"], "Held for a human moderator - this one needs review.", reply_to_message_id=reply_to)
+                        print("   replied: held for review")
             except Exception as error:
                 print(f"   reply failed: {error}")
         time.sleep(1)
