@@ -9,6 +9,7 @@
 		fetchCounts,
 		fetchEvents,
 		fetchTrace,
+		resolveCase,
 		type Counts,
 		type EventRow,
 		type Trace
@@ -21,7 +22,28 @@
 	let stale = $state(true);
 	let now = $state(Date.now());
 	let lastSync = $state<number | null>(null);
-	let confirming = $state<string | null>(null);
+	let busy = $state<string | null>(null);
+	let notice = $state<string | null>(null);
+
+	async function handleResolve(eventId: string, verdict: 'approve' | 'deny' | 'edit', label = '') {
+		busy = eventId;
+		notice = null;
+		try {
+			const body =
+				verdict === 'approve'
+					? { verdict: 'approve', resulting_action: 'answer' }
+					: verdict === 'deny'
+						? { verdict: 'deny', resulting_action: 'no_action' }
+						: { verdict: 'edit', reason_code: label, resulting_action: 'answer' };
+			const r = await resolveCase(eventId, body);
+			notice = `Recorded override #${r.override_id} — case leaves the queue on next sync.`;
+			await refresh();
+		} catch (err) {
+			notice = `Resolve failed: ${(err as Error).message}. The API tab may need a restart for the new endpoint.`;
+		} finally {
+			busy = null;
+		}
+	}
 
 	let quarantined = $derived((events ?? []).filter((e) => e.band === 'DRAFT'));
 	let taught = $derived((events ?? []).filter((e) => (e.reason ?? '').includes('taught')).length);
@@ -118,7 +140,14 @@
 			<p class="text-sm text-muted-foreground">Queue empty — nothing waiting for review.</p>
 		{:else}
 			{#each quarantined as ev (ev.event_id)}
-				<CaseCard event={ev} trace={traces[ev.event_id] ?? null} {now} {confirming} />
+				<CaseCard
+					event={ev}
+					trace={traces[ev.event_id] ?? null}
+					{now}
+					{busy}
+					{notice}
+					onResolve={handleResolve}
+				/>
 			{/each}
 		{/if}
 	</section>
