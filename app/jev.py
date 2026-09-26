@@ -6,7 +6,7 @@ import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
-PROMPT_VERSION = "classify-v0.3"
+PROMPT_VERSION = "classify-v0.4"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 
@@ -38,7 +38,7 @@ def classify_questions() -> dict:
     return {
         "solicitation": {
             "type": "noul",
-            "instructions": "Does the author seek to move readers toward an offer, payment, contact, external signup, or promotion — the author promoting or directing others? If the author is instead asking for help or information for themselves (e.g., 'how do I join X'), answer false. A member warning others about a scam is not a scam.",
+            "instructions": "Does the author seek to promote or direct readers toward an offer, payment, contact, external signup, or similar action - the author pushing others? If the author is asking for help or information for themselves, or discussing a topic, answer false. A member warning others about a scam is not a scam.",
         },
         "question_shape": {
             "type": "noul",
