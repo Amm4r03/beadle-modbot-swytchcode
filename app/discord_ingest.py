@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app import db, escalation, swytchcode
+from app import beliefs, db, escalation, swytchcode
 from app.graph import build_graph
 
 TOKEN = os.environ["DISCORD_BOT_TOKEN"]

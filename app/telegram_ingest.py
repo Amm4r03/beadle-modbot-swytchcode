@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app import db, escalation, swytchcode
+from app import beliefs, db, escalation, swytchcode
 from app.graph import build_graph
 from app.telegram_direct import TelegramDirect
 
@@ -83,7 +83,7 @@ def main() -> None:
                     )
                     print("   replied: no grounded answer - passed to moderator")
                 elif band == "DRAFT":
-                    if "threat" in decision.get("reason", "") or "harassment" in decision.get("reason", ""):
+                    if beliefs.action_for(event["community_id"], decision.get("reason", "")) == "delete":
                         try:
                             bot.delete_message(event["channel_id"], reply_to)
                             print("   deleted the harmful message")

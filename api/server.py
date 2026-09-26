@@ -158,7 +158,15 @@ def resolve_quarantine(event_id: str, request: ResolveRequest):
             ),
         )
         con.commit()
-        return {"ok": True, "event_id": event_id, "override_id": override_id, "cards_updated": updated}
+        from app import beliefs
+
+        decision = con.execute(
+            "SELECT reason FROM decisions WHERE event_id = ? ORDER BY id DESC LIMIT 1", (event_id,)
+        ).fetchone()
+        message_class = beliefs.class_from_reason(decision["reason"] if decision else "")
+        learned_action = "delete" if request.verdict.lower() in ("approve", "delete") else "hold"
+        config = beliefs.update_from_override(community["community_id"] if community else "unknown", message_class, learned_action)
+        return {"ok": True, "event_id": event_id, "override_id": override_id, "cards_updated": updated, "learned": {"class": message_class, "action": learned_action, "config": config}}
     finally:
         con.close()
 
