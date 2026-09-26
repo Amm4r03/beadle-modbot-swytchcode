@@ -43,7 +43,7 @@
 			<CardTitle>{event.event_id}</CardTitle>
 			<StatusChip band={event.band} verdict={event.verdict} />
 		</div>
-		<p class="text-muted-foreground text-xs tabular-nums" title={event.received_at}>
+		<p class="text-xs text-muted-foreground tabular-nums" title={event.received_at}>
 			{event.author_id ?? 'unknown'} · {timeAgo(event.received_at, now)}
 		</p>
 	</CardHeader>
@@ -57,7 +57,7 @@
 					<dd class="font-semibold tabular-nums">
 						{latest.confidence === null ? '—' : latest.confidence.toFixed(2)}
 						{#if threshold !== null}
-							<span class="text-muted-foreground font-normal tabular-nums">
+							<span class="font-normal text-muted-foreground tabular-nums">
 								vs {threshold.toFixed(2)} threshold
 							</span>
 						{/if}
@@ -75,14 +75,14 @@
 					{/each}
 				</p>
 			{/if}
-			<p class="text-muted-foreground text-xs tabular-nums">
+			<p class="text-xs text-muted-foreground tabular-nums">
 				{latest.model_id ?? 'no model'} · {latest.prompt_version ?? 'no prompt version'} ·
 				{latest.result_status ?? 'no status'}
 			</p>
 		{/if}
 
 		{#if trace === null}
-			<p class="text-muted-foreground text-sm">Loading trace…</p>
+			<p class="text-sm text-muted-foreground">Loading trace…</p>
 		{:else}
 			<Accordion type="single">
 				<AccordionItem value="trace">
@@ -106,8 +106,8 @@
 					<AccordionContent>
 						<ul class="flex flex-col gap-1">
 							{#each trace.signals as s (s.signal_version)}
-								<li class="text-muted-foreground text-xs">
-									<span class="text-foreground font-medium">{s.signal_version}</span>
+								<li class="text-xs text-muted-foreground">
+									<span class="font-medium text-foreground">{s.signal_version}</span>
 									· {s.evaluated_at}
 								</li>
 							{/each}
@@ -137,7 +137,7 @@
 					</AlertDialogContent>
 				</AlertDialog>
 				{#if confirming}
-					<p class="text-muted-foreground text-xs">{confirming}</p>
+					<p class="text-xs text-muted-foreground">{confirming}</p>
 				{/if}
 			</div>
 		{/if}

@@ -84,13 +84,13 @@
 	<header class="flex flex-wrap items-baseline justify-between gap-2">
 		<div>
 			<h1 class="text-xl font-semibold">Beadle admin</h1>
-			<p class="text-muted-foreground text-sm tabular-nums">{DEFAULT_COMMUNITY}</p>
+			<p class="text-sm text-muted-foreground tabular-nums">{DEFAULT_COMMUNITY}</p>
 		</div>
-		<p class="text-muted-foreground text-xs tabular-nums" aria-live="polite">
+		<p class="text-xs text-muted-foreground tabular-nums" aria-live="polite">
 			{#if stale}
 				reconnecting — data may be stale
 			{:else if lastSync}
-				live · synced {(Math.round((now - lastSync) / 1000))}s ago
+				live · synced {Math.round((now - lastSync) / 1000)}s ago
 			{:else}
 				connecting…
 			{/if}
@@ -98,7 +98,10 @@
 	</header>
 
 	{#if error}
-		<p role="alert" class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+		<p
+			role="alert"
+			class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+		>
 			Couldn't reach the read API ({error}). The API runs in your api tab — restart it there, not
 			here.
 		</p>
@@ -112,7 +115,7 @@
 			Quarantine ({quarantined.length})
 		</h2>
 		{#if quarantined.length === 0}
-			<p class="text-muted-foreground text-sm">Queue empty — nothing waiting for review.</p>
+			<p class="text-sm text-muted-foreground">Queue empty — nothing waiting for review.</p>
 		{:else}
 			{#each quarantined as ev (ev.event_id)}
 				<CaseCard event={ev} trace={traces[ev.event_id] ?? null} {now} {confirming} />
@@ -123,7 +126,7 @@
 	<section aria-label="Learning" class="flex flex-col gap-2">
 		<h2 class="text-base font-semibold">Because you taught me</h2>
 		{#if taught === 0}
-			<p class="text-muted-foreground text-sm">
+			<p class="text-sm text-muted-foreground">
 				No carried-over decisions yet. Resolve a case and a later one handled from it will appear
 				here.
 			</p>

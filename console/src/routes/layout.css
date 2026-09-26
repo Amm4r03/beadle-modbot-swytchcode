@@ -1,13 +1,16 @@
 @import 'tailwindcss';
 @import '../../node_modules/tw-animate-css/dist/tw-animate.css';
 @import '../../node_modules/shadcn-svelte/dist/tailwind.css';
-@import "@fontsource-variable/inter";
+@import '@fontsource-variable/inter';
 
 @custom-variant dark (&:is(.dark *));
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
-::selection { background: var(--primary); color: var(--primary-foreground); }
+::selection {
+	background: var(--primary);
+	color: var(--primary-foreground);
+}
 :root {
 	--background: oklch(1 0 0);
 	--foreground: oklch(0.145 0 0);

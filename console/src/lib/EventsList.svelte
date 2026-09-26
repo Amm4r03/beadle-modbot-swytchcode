@@ -16,11 +16,11 @@
 
 <section id="events" aria-label="Recent events">
 	{#if events === null}
-		<p class="text-muted-foreground text-sm">Loading events…</p>
+		<p class="text-sm text-muted-foreground">Loading events…</p>
 	{:else if events.length === 0}
-		<p class="text-muted-foreground text-sm">{emptyLabel}</p>
+		<p class="text-sm text-muted-foreground">{emptyLabel}</p>
 	{:else}
-		<ul class="divide-border divide-y rounded-xl border">
+		<ul class="divide-y divide-border rounded-xl border">
 			{#each events as ev (ev.event_id)}
 				<li>
 					<a
@@ -31,7 +31,7 @@
 							<span class="block truncate text-sm">
 								{ev.text ?? '(no text recorded)'}
 							</span>
-							<span class="text-muted-foreground block text-xs tabular-nums">
+							<span class="block text-xs text-muted-foreground tabular-nums">
 								{ev.event_id} · {ev.author_id ?? 'unknown'} · {ageMinutes(ev.received_at, now)} old
 							</span>
 						</span>
