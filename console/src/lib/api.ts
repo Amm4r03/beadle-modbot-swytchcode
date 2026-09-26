@@ -210,3 +210,11 @@ export async function addKnowledge(
 	if (!res.ok) throw new Error(`API ${res.status} on knowledge add`);
 	return (await res.json()) as { ok: boolean; doc_id: string; docs: number };
 }
+export interface PlatformInfo {
+	status: string;
+	detail: string;
+}
+
+export type Platforms = Record<string, PlatformInfo>;
+
+export const fetchPlatforms = (signal?: AbortSignal) => get<Platforms>('/api/platforms', signal);
