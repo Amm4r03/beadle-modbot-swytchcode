@@ -9,6 +9,7 @@ MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
 PROMPT_VERSION = "classify-v0.4"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
+KNOWLEDGE_PROMPT_VERSION = "knowledge-v0.2"
 
 
 class JevBlocked(Exception):
@@ -102,7 +103,7 @@ def check_answerable(question: str, passages: list[dict]) -> dict:
     questions = {
         "internal_knowledge_question": {
             "type": "noul",
-            "instructions": "Is this question about community-maintained topics (plant care, watering, pests, local buying) that a community knowledge base is meant to answer?",
+            "instructions": "Is the QUESTION the kind of community question this knowledge base is meant to answer - about the same community topics as the PASSAGES - rather than a promotion, personal offer, or unrelated matter?",
         },
         "answerable": {
             "type": "noul",

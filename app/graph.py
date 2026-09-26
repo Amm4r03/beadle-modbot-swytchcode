@@ -104,7 +104,7 @@ def classify(state: AgentState) -> AgentState:
                 "INSERT OR REPLACE INTO signal_runs (event_id, signal_version, result_json, evaluated_at) VALUES (?,?,?,?)",
                 (
                     event["event_id"],
-                    "knowledge_answer@v0.1",
+                    "knowledge_answer@v0.2",
                     json.dumps({"signal": "knowledge_answer", "value": knowledge["answerable_p"], "passages": knowledge["passages"]}),
                     now(),
                 ),
