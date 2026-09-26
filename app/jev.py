@@ -6,7 +6,7 @@ import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
-PROMPT_VERSION = "classify-v0.4"
+PROMPT_VERSION = "classify-v0.5"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 KNOWLEDGE_PROMPT_VERSION = "knowledge-v0.2"
@@ -49,6 +49,10 @@ def classify_questions() -> dict:
             "type": "noul",
             "instructions": "Is a moderator needed because the relevant meaning or applicable community norm is materially uncertain, sensitive, or disputed? Do not infer this merely because a score is near a threshold; the reducer handles score bands.",
         },
+        "threat_or_harm": {
+            "type": "noul",
+            "instructions": "Does the message threaten violence, destruction, or serious harm to people, the community, or its property - including threats to delete, destroy, or shut the community down? Discussing hypotheticals, reporting a threat, or warning others is not a threat.",
+        },
     }
 
 
@@ -73,7 +77,7 @@ def run_classify(event_text: str) -> dict:
         result.update(
             result_status="timeout" if isinstance(error, httpx.TimeoutException) else "error",
             degraded=True,
-            scores={"solicitation": None, "question_shape": None, "needs_human_review": None},
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None},
             error=f"{type(error).__name__}: {str(error)[:120]}",
         )
         return result
@@ -83,6 +87,7 @@ def run_classify(event_text: str) -> dict:
             "solicitation": float(answers["solicitation"]["noul"]),
             "question_shape": float(answers["question_shape"]["noul"]),
             "needs_human_review": float(answers["needs_human_review"]["noul"]),
+            "threat_or_harm": float(answers["threat_or_harm"]["noul"]),
         }
         result["model_id"] = raw.get("model", MODEL)
         result["usage"] = raw.get("usage", {})
@@ -90,7 +95,7 @@ def run_classify(event_text: str) -> dict:
         result.update(
             result_status="parse_error",
             degraded=True,
-            scores={"solicitation": None, "question_shape": None, "needs_human_review": None},
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None},
             error="missing or malformed noul value",
         )
     return result
@@ -127,9 +132,10 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     scam_p = scores.get("solicitation")
     question_p = scores.get("question_shape")
     review_p = scores.get("needs_human_review")
+    threat_p = scores.get("threat_or_harm")
     knowledge = knowledge or {}
     knowledge_ok = (knowledge.get("answerable_p") or 0) >= 0.70 and (knowledge.get("internal_p") or 0) >= 0.50
-    if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None:
+    if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None or threat_p is None:
         return {
             "verdict": "review",
             "band": "DRAFT",
@@ -138,7 +144,10 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
             "scores": scores,
             "model_id": jev_result.get("model_id"),
         }
-    if scam_p >= 0.70:
+    if threat_p >= 0.70:
+        verdict, band = "quarantine", "DRAFT"
+        reason = f"gate: threat/harm probability {threat_p:.2f} at/above 0.70 - quarantine for review"
+    elif scam_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: solicitation probability {scam_p:.2f} at/above 0.70 - quarantine for review"
     elif question_p >= 0.85 and review_p < 0.50 and (scam_p <= 0.10 or knowledge_ok):
