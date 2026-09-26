@@ -48,7 +48,7 @@ def observe(state: AgentState) -> AgentState:
 
 def classify(state: AgentState) -> AgentState:
     event = state["event"]
-    results = signals.run_signals(event)
+    results = signals.run_signals(event, signals.build_context(event))
     jev_result = jev.run_classify(event.get("text", ""))
     con = db.connect()
     for result in results:
