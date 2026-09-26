@@ -21,16 +21,11 @@ The demo moment: a genuine question gets a confident answer while a polished sca
 
 ## Architecture
 
-```
-        Telegram / Discord
-                │  events (normalized, deduped)
-                ▼
-   observe ─► classify ─► gate ─┬─► resolve ─► learn
-                                └─► escalate ─► resolve ─► learn
-```
+Full diagram with planes, stores, and surfaces: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+Agent nodes:
 
 | Node | Responsibility | Store |
-|---|---|---|
 | observe | Normalize platform events, stable event IDs, dedupe | `inbox_events`, `normalized_events` |
 | classify | Deterministic signals + batched Jev semantic questions | `signal_runs` |
 | gate | Pure reducer over signals + Jev probabilities → AUTO / DRAFT / DENY with reason + confidence | `decisions` |
@@ -43,23 +38,29 @@ flowchart LR
     TG[Telegram] --> O
     DC[Discord] --> O
     O[observe] --> C[classify: 8 deterministic signals + 1 batched Jev call]
-    C --> G{gate: pure reducer}
-    G -->|AUTO| R[resolve: outbox]
+    C --> K{knowledge retrieval + nested Jev check}
+    K --> G{gate: pure reducer}
+    G -->|AUTO| D[draft: answer from cited docs]
     G -->|DRAFT| E[escalate: quarantine card]
     G -->|DENY| L[learn]
+    D --> R[resolve: outbox]
     E --> R
     R --> L
     R --> SWY[Swytchcode exec]
-    SWY --> DCO[Discord / Slack post]
-    SWY --> NO[Notion ledger + queue]
-    SWY --> RE[Resend digest]
+    SWY --> NO[Notion report]
+    SWY --> SL[Slack escalation + reasoning log]
+    SWY --> RE[Resend Beadle Agent digest]
     O -.-> DB[(state.db ledger)]
     C -.-> DB
+    K -.-> DB
     G -.-> DB
+    D -.-> DB
     L -.-> DB
     DB --> API[read API :8788 + SSE]
-    API --> UI[Svelte console]
+    API --> UI[Svelte admin console]
+    API --> TEST[/test agent journey view]
 ```
+
 
 **State discipline:** LangGraph owns the event-scoped state; SQLite (`data/state.db`) is the durable ledger; `data/checkpoints.db` holds compact checkpoints (disposable, rebuildable). The thread id is `tenant:platform:event_id` — never one thread per community. Model calls never execute writes: every external action goes through the outbox.
 
