@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sqlite3
 import time
 from pathlib import Path
@@ -208,6 +209,77 @@ def usage():
     )
 
 
+class KnowledgeRequest(BaseModel):
+    title: str
+    text: str
+
+
+class AnnounceRequest(BaseModel):
+    text: str
+    platforms: list[str] = ["telegram", "slack", "discord"]
+
+
+@app.get("/api/knowledge")
+def list_knowledge():
+    return rows("SELECT doc_id, title, added_at FROM knowledge_docs ORDER BY added_at DESC")
+
+
+@app.post("/api/knowledge")
+def add_knowledge(request: KnowledgeRequest):
+    from app import memory
+
+    doc_id = re.sub(r"[^a-z0-9]+", "-", request.title.lower()).strip("-")[:60] or "doc"
+    memory.remember(doc_id, request.title, request.text)
+    return {"ok": True, "doc_id": doc_id, "docs": memory.count()}
+
+
+@app.post("/api/announce")
+def announce(request: AnnounceRequest):
+    results: dict[str, str] = {}
+    if "telegram" in request.platforms:
+        try:
+            from app.telegram_direct import TelegramDirect
+
+            chat_id = os.environ.get("TELEGRAM_CHAT_ID", "")
+            if not chat_id:
+                updates = TelegramDirect().get_updates(timeout=1)
+                chats = {str((u.get("message") or {}).get("chat", {}).get("id")) for u in updates}
+                chats.discard("None")
+                chat_id = sorted(chats)[-1] if chats else ""
+            if chat_id:
+                TelegramDirect().send_message(chat_id, request.text)
+                results["telegram"] = f"sent to {chat_id}"
+            else:
+                results["telegram"] = "no chat id yet — send a message to the bot first"
+        except Exception as error:
+            results["telegram"] = str(error)[:140]
+    if "slack" in request.platforms:
+        from app import swytchcode as swy_client
+
+        try:
+            swy_client.post_slack_message(os.environ.get("SLACK_CHANNEL_ID", ""), request.text)
+            results["slack"] = "sent"
+        except Exception as error:
+            results["slack"] = str(error)[:140]
+    if "discord" in request.platforms:
+        try:
+            import httpx
+
+            token = os.environ.get("DISCORD_BOT_TOKEN", "")
+            channel = os.environ.get("DISCORD_CHANNEL_ID", "")
+            response = httpx.post(
+                f"https://discord.com/api/v10/channels/{channel}/messages",
+                headers={"Authorization": f"Bot {token}"},
+                json={"content": request.text},
+                timeout=15,
+            )
+            response.raise_for_status()
+            results["discord"] = "sent"
+        except Exception as error:
+            results["discord"] = str(error)[:140]
+    return {"ok": True, "results": results}
+
+
 @app.get("/test")
 def test_view():
     return FileResponse(ROOT / "api" / "test.html")
@@ -253,6 +325,7 @@ def ingest(request: IngestRequest):
     path = " → ".join(t["to_state"] for t in final.get("transitions", []))
     reasoning = (
         f"Beadle reasoning log\nEvent: {event_id}\n"
+        f"Message: {request.text[:300]}\n"
         f"Path: {path}\n"
         f"solicitation {scores.get('solicitation')} · question {scores.get('question_shape')} · review {scores.get('needs_human_review')}\n"
         f"Decision: {decision.get('band')}:{decision.get('verdict')} (conf {decision.get('confidence')})\n"
