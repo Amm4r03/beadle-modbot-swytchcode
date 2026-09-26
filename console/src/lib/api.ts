@@ -116,3 +116,52 @@ export async function resolveCase(
 	if (!res.ok) throw new Error(`API ${res.status} on resolve ${eventId}`);
 	return (await res.json()) as ResolveResult;
 }
+export interface Metrics {
+	totals: {
+		events: number;
+		decisions: number;
+		transitions: number;
+		actions: number;
+		overrides: number;
+	};
+	transitions: { to_state: string; n: number }[];
+	bands: { band: string; n: number }[];
+}
+
+export const fetchMetrics = (signal?: AbortSignal) => get<Metrics>('/api/metrics', signal);
+
+export interface IngestResult {
+	event_id: string;
+	band: string | null;
+	verdict: string | null;
+	confidence: number | null;
+	reason: string | null;
+	transitions: string[];
+}
+
+export async function ingestMessage(
+	text: string,
+	author_id = 'demo-user',
+	signal?: AbortSignal
+): Promise<IngestResult> {
+	const res = await fetch(`${API_BASE}/api/ingest`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text, author_id }),
+		signal
+	});
+	if (!res.ok) throw new Error(`API ${res.status} on ingest`);
+	return (await res.json()) as IngestResult;
+}
+
+// Keep one row per signal name — the ledger stores every evaluated version,
+// so `first_link@v0.1` + `@v0.2` would otherwise double-count.
+export function latestSignals(signals: SignalRun[]): SignalRun[] {
+	const byName: Record<string, SignalRun> = {};
+	for (const s of signals) {
+		const name = s.signal_version.split('@')[0];
+		const cur = byName[name];
+		if (!cur || s.signal_version > cur.signal_version) byName[name] = s;
+	}
+	return Object.values(byName).sort((a, b) => a.signal_version.localeCompare(b.signal_version));
+}
