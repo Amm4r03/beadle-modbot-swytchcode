@@ -45,10 +45,8 @@ export interface ReasonSegment {
 }
 
 export function linkifyEvidence(reason: string): ReasonSegment[] {
-	const parts = reason.split(/(evt:[A-Za-z0-9:_\-]+)/g);
+	const parts = reason.split(/(evt:[A-Za-z0-9:_-]+)/g);
 	return parts
 		.filter((p) => p.length > 0)
-		.map((p) =>
-			p.startsWith('evt:') ? { text: p, eventId: p.slice(4) } : { text: p }
-		);
+		.map((p) => (p.startsWith('evt:') ? { text: p, eventId: p.slice(4) } : { text: p }));
 }
