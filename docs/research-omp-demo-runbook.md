@@ -20,23 +20,32 @@ Owner: `omp-research-2` · Task: REQ #64 package 2. Sources: `data/state.db` liv
 - Cards: `card-tg-demo-msg-b`, `card-demo-17aefbed` (both `mod_queue_card`, pending); answers: `act-tg-demo-msg-a`, `act-demo-c3aff027` (both `post_answer`, pending).
 - Override row id 1: `tg-demo-msg-b` → approve (writeback path exists; verify live before stage).
 
-## Chain artifacts (provenance-flagged)
+## Chain artifacts (from `docs/chain-run-proof.json` — fresh live run, committed)
 
-- **Notion report page `3e781f99-c28c-8147-9fa0-ff9d50a2b1c5`** — VERIFIED in HANDOFF (integration bot "beadle", top-level Beadle page created; ledger/queue DBs not yet created).
-- **Slack ts + Resend id from the REQ** (`1790411848.603789`, `01a0dcdc-…`) — NOT FOUND in state.db, HANDOFF, app/, or bridge history. Treated as **unverified — do not cite on stage** until deepseek confirms their source. Chain status per bridge 13:55: Notion 200 + Resend 200 live; Slack live the moment the bot is invited; Discord blocked on reconnect.
-- 3-provider chain for the rubric: Notion → Slack → Resend (all reachable today) with Discord as backup once reconnected.
+- **Notion report page `3e781f99-c28c-8135-b097-f53607d9bd62`** — 200, created 2026-09-26T08:50Z, request `e8801678-…`; audit `nw_5311dd64e241`.
+- **Slack ts `1790412619.377569`** (channel `C0C4JHM79AA`) — 200; audit `nw_44f67f184a00`.
+- **Resend id `01a0dce8-82ca-73ca-a8f9-fffefd124515`** — 200; audit `nw_fa0705d353ec`.
+- **Discord: ERROR (expected)** — exit 3, 401 auth (connection revoked); chain goes Notion → Slack → Resend for the 3-provider rubric. Discord excluded until reconnected.
+- Provenance rule: cite the proof file, never hand-copied IDs. Re-run `swy audit network` for the 14:2x entries if the demo needs fresh timestamps.
+
+## New features since the first runbook (verify live before stage)
+
+- **Announcements** (`POST /api/announce`, api/server.py:236): broadcast text to Telegram (direct Bot API, needs `TELEGRAM_CHAT_ID` or a prior inbound message to discover it), Slack (Swytchcode post, needs channel), Discord (direct REST, needs token + channel). Per-platform results returned, failures as strings — rehearse which legs are green.
+- **Knowledge ingest** (`POST /api/knowledge` + `GET /api/knowledge`): title+text → doc_id slug → `memory.remember`; 9 docs live (6 GDG + 3 plant). See `research-omp-knowledge-usage.md` for citation/hit-miss metrics.
+- **Telegram ingress** (poller in `telegram-ingest` tab): live group → events. Confirm the poller is running + which group before promising live ingress on stage.
+- **`/test` view** (api/server.py:283, `api/test.html`): rehearsal surface — confirm it loads + which actions it exercises before routing the demo through it.
 
 ## Click-by-click (2.5 min)
 
 1. **0:00–0:20 Number:** "6-hour report → about a minute" + sourced pain. No fixture claims beyond MapleNest.
-2. **0:20–0:50 Cold open:** Notion Beadle page (`3e781f99…`) + trust-ramp visual. State: ledger/queue DBs pending — say so if asked.
-3. **0:50–1:40 Split decision:** `tg-demo-msg-a` AUTO (0.93, reason on screen) → answer posts; `tg-demo-msg-b` DRAFT (0.98) → guardrail card. Same second, opposite outcomes.
-4. **1:40–2:00 Guardrail:** policy proof trio from package 1 (`policy list` → trip backstop → `audit policy` fresh row) OR the quarantine card — pick one, not both, for time.
-5. **2:00–2:30 Close:** report lands, digest queued, override counter. Stop. Backup video covers the full path if anything fails live.
+2. **0:20–0:50 Cold open:** Notion Beadle page + trust-ramp visual (IDs above, from the proof file).
+3. **0:50–1:40 Split decision:** `tg-demo-msg-a` AUTO (0.93) → answer posts; `tg-demo-msg-b` DRAFT (0.98) → guardrail card. Same second, opposite outcomes.
+4. **1:40–2:00 Guardrail:** policy trio (`policy list` → trip backstop → `audit policy` fresh row) OR the quarantine card — pick one for time.
+5. **2:00–2:30 Close:** report lands, digest queued, override counter. Stop. Backup video covers failures.
 
 ## Pre-stage checklist
 
 - [ ] Override row 1 writeback verified live (approve → labeled example queryable).
-- [ ] Slack bot invited (`/invite @swytchcode`) or Slack leg cut from the chain story.
-- [ ] Discord reconnect decision (in scope or cut — affects the 3-provider claim).
+- [ ] Slack bot invited or Slack leg cut from the chain story.
+- [ ] Discord reconnect decision (in scope or cut).
 - [ ] Backup video recorded against these exact event IDs.
