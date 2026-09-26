@@ -8,6 +8,7 @@
 	import TryGate from '$lib/TryGate.svelte';
 	import Announce from '$lib/Announce.svelte';
 	import Knowledge from '$lib/Knowledge.svelte';
+	import Platforms from '$lib/Platforms.svelte';
 	import {
 		DEFAULT_COMMUNITY,
 		STREAM_URL,
@@ -147,6 +148,7 @@
 	<ExecLog events={events ?? []} {traces} {now} />
 	<Announce />
 	<Knowledge {metrics} refreshKey={syncTick} />
+	<Platforms refreshKey={syncTick} />
 	<section id="queue" aria-label="Quarantine queue" class="flex flex-col gap-4">
 		<h2 class="text-base font-semibold tabular-nums">
 			Quarantine ({quarantined.length})
