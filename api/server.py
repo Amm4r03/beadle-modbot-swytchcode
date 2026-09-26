@@ -15,7 +15,8 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 
 def connect() -> sqlite3.Connection:
-    con = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+    con = sqlite3.connect(DB_PATH, timeout=5)
+    con.execute("PRAGMA query_only=ON")
     con.row_factory = sqlite3.Row
     return con
 
