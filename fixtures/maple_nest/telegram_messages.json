@@ -1,0 +1,173 @@
+{
+  "_note": "MapleNest staged Telegram history (6 weeks, seeded 2026-08-10 → 2026-09-24). LIVE pair lands at demo T+0. All real-pattern messages pre-validated for Jev gates in fixtures/jev_gates.yaml.",
+  "group": {
+    "name": "MapleNest 🌿",
+    "platform": "telegram",
+    "members": 1243,
+    "regulars": [
+      "arjun_plants",
+      "meera_greens",
+      "kabir_soil",
+      "sana_leafs",
+      "vikram_pots",
+      "divya_fern",
+      "rohan_cacti",
+      "anaya_moss"
+    ],
+    "lurkers_count": 41,
+    "quarantined_last_week": [
+      "MapleNestAdmin_bot"
+    ]
+  },
+  "history": [
+    {
+      "ts": "2026-08-12T09:14:00+05:30",
+      "from": "arjun_plants",
+      "text": "morning all 🌱 repotted the money plant finally, thanks for the soil mix tip @kabir_soil"
+    },
+    {
+      "ts": "2026-08-12T09:31:00+05:30",
+      "from": "kabir_soil",
+      "text": "anytime! 30% cocopeat 30% compost rest garden soil, works for most indoor ones"
+    },
+    {
+      "ts": "2026-08-15T18:02:00+05:30",
+      "from": "sana_leafs",
+      "text": "guys where do you buy neem oil in indiranagar? the nursery near 100ft quoted 450 for 500ml, feels high"
+    },
+    {
+      "ts": "2026-08-15T18:20:00+05:30",
+      "from": "vikram_pots",
+      "text": "lol that's 2x. bigbasket has 250ml for 180, works fine for my roses"
+    },
+    {
+      "ts": "2026-08-19T11:45:00+05:30",
+      "from": "meera_greens",
+      "text": "PSA: if your hibiscus buds are dropping check for mealybugs under the leaves first before blaming water 🙏 lost 3 buds this way"
+    },
+    {
+      "ts": "2026-08-22T20:11:00+05:30",
+      "from": "divya_fern",
+      "text": "ferns + bangalore hard water = brown tips forever? or am i doing something wrong 😅"
+    },
+    {
+      "ts": "2026-08-22T20:33:00+05:30",
+      "from": "anaya_moss",
+      "text": "you're not wrong, mine only stopped once i switched to filtered water for misting. tap for soil is fine"
+    },
+    {
+      "ts": "2026-08-27T10:05:00+05:30",
+      "from": "rohan_cacti",
+      "text": "unrelated but does anyone want 2 free clay pots? moving flats, pickup hsr layout this weekend. first come"
+    },
+    {
+      "ts": "2026-08-27T10:19:00+05:30",
+      "from": "arjun_plants",
+      "text": "me! dm'ing you"
+    },
+    {
+      "ts": "2026-09-02T14:52:00+05:30",
+      "from": "kabir_soil",
+      "text": "repeating my yearly rant: STOP bringing nursery soil home without quarantining the pot for a week. fungus gnats. every september. every year."
+    },
+    {
+      "ts": "2026-09-02T15:07:00+05:30",
+      "from": "sana_leafs",
+      "text": "😂 noted sir. also my curry leaf plant finally has new growth after like 4 months of sulking"
+    },
+    {
+      "ts": "2026-09-08T19:26:00+05:30",
+      "from": "meera_greens",
+      "text": "heads up, someone DM'd me pretending to be a group admin asking me to 'verify' on some site. i blocked. careful everyone"
+    },
+    {
+      "ts": "2026-09-08T19:31:00+05:30",
+      "from": "kabir_soil",
+      "text": "thanks for flagging meera. @mods can we pin a warning? that MapleNestAdmin_bot account is NOT us"
+    },
+    {
+      "ts": "2026-09-08T19:40:00+05:30",
+      "from": "mod_ash",
+      "text": "pinned 📌 and banned MapleNestAdmin_bot. real mods will NEVER dm you for verification or wallets. please report anything sus"
+    },
+    {
+      "ts": "2026-09-14T08:44:00+05:30",
+      "from": "vikram_pots",
+      "text": "rose pruning q: bengaluru sept, too early? mine's leggy after the rains"
+    },
+    {
+      "ts": "2026-09-14T09:02:00+05:30",
+      "from": "divya_fern",
+      "text": "i'd wait till oct. mine sulked for a month when i pruned in sept last year lol"
+    },
+    {
+      "ts": "2026-09-20T17:15:00+05:30",
+      "from": "anaya_moss",
+      "text": "moss pole DIY: pvc pipe + sphagnum + jute string, total 120rs vs 600 online. happy to share pics if anyone wants"
+    },
+    {
+      "ts": "2026-09-20T17:29:00+05:30",
+      "from": "arjun_plants",
+      "text": "yes pls! my monstera is staging a jailbreak"
+    },
+    {
+      "ts": "2026-09-23T21:03:00+05:30",
+      "from": "rohan_cacti",
+      "text": "btw moved flats, thanks again for the help @arjun_plants. cacti survived the move 🌵"
+    },
+    {
+      "ts": "2026-09-24T10:30:00+05:30",
+      "from": "sana_leafs",
+      "text": "rain's back lol. moved all the succulents under the awning. see you all sunday for the swap meet?"
+    },
+    {
+      "ts": "2026-09-24T10:41:00+05:30",
+      "from": "meera_greens",
+      "text": "yes! bringing 3 tomato saplings for whoever wants. first come at the gate :)"
+    }
+  ],
+  "live_pair": [
+    {
+      "id": "MSG-A",
+      "role": "genuine_member_question",
+      "ts": "DEMO T+0",
+      "from": "priya_grows",
+      "from_meta": "lurker, 0 prior posts, joined 2026-09-18",
+      "text": "hey! my balcony tomatoes got these yellow spots after the rain last week — anyone dealt with this? pics in thread 🙏",
+      "thread_replies": [
+        {
+          "from": "priya_grows",
+          "text": "[photo: tomato leaf, yellow halo spots] it's mostly the lower leaves. whitefield side, gets ~4hrs sun"
+        }
+      ]
+    },
+    {
+      "id": "MSG-B",
+      "role": "polished_scam",
+      "ts": "DEMO T+8s",
+      "from": "MapleNest_Admin",
+      "from_meta": "joined 2 days ago, 0 prior posts, handle mimics real mod naming",
+      "text": "URGENT: MapleNest is migrating! Verify your wallet to keep your membership + claim 50 MAPLE tokens 👉 maplenest-verify[.]xyz"
+    },
+    {
+      "id": "MSG-R1",
+      "role": "held_back_raid_variant_primary",
+      "held_back": "Never in the rehearsal corpus; revealed live on stage. Scored by live Jev at build time (no offline score claims).",
+      "ts": "DEMO raid beat",
+      "from": "maplenest.support",
+      "from_meta": "joined 6 hours ago, 0 prior posts, dotted handle (new impersonation style, not underscore)",
+      "text": "Hi gardeners 🌿 we're doing a quick member survey — first 50 responses get a free premium soil testing kit. Just connect your wallet at maplenest-rewards[.]xyz to confirm you're human",
+      "framing": "different lure (reward, not migration), different handle style (dots, not underscore), same verdict — proves the gate generalizes"
+    },
+    {
+      "id": "MSG-R2",
+      "role": "held_back_raid_variant_fallback",
+      "held_back": "Never in the rehearsal corpus; revealed live on stage. Scored by live Jev at build time (no offline score claims).",
+      "ts": "DEMO raid beat fallback",
+      "from": "Maple_Nest_Official",
+      "from_meta": "joined 1 day ago, 0 prior posts",
+      "text": "Important: Telegram is deleting inactive gardening groups. Admins must re-verify the group here within 24h or MapleNest gets archived: t[.]me-verify-maplenest[.]xyz — please forward to all members",
+      "framing": "platform-threat lure (fear, not greed); backup if R1 under-scores"
+    }
+  ]
+}
