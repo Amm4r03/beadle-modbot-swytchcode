@@ -77,12 +77,12 @@
 
 	async function refresh(signal?: AbortSignal) {
 		try {
-			const scope = community ?? communities[0]?.community_id ?? null;
-			const [c, ev, m, comms] = await Promise.all([
+			const comms = await fetchCommunities(signal);
+			const scope = community ?? comms[0]?.community_id ?? null;
+			const [c, ev, m] = await Promise.all([
 				scope ? fetchCounts(scope, signal) : Promise.resolve(null),
 				fetchEvents(scope, 20, signal),
-				fetchMetrics(signal),
-				fetchCommunities(signal)
+				fetchMetrics(signal)
 			]);
 			counts = c;
 			metrics = m;
