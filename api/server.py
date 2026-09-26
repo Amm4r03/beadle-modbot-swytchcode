@@ -3,10 +3,13 @@ import sqlite3
 import time
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
+
+load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "state.db"
@@ -152,6 +155,97 @@ def resolve_quarantine(event_id: str, request: ResolveRequest):
         return {"ok": True, "event_id": event_id, "override_id": override_id, "cards_updated": updated}
     finally:
         con.close()
+
+
+@app.get("/api/prompts")
+def prompts():
+    from app import jev
+
+    return {
+        "prompt_version": jev.PROMPT_VERSION,
+        "prompt_hash": jev.prompt_hash(),
+        "model": jev.MODEL,
+        "questions": jev.classify_questions(),
+        "bands": {
+            "quarantine": "solicitation >= 0.70",
+            "answer": "question_shape >= 0.85 and solicitation <= 0.10 and needs_human_review < 0.50",
+            "review": "needs_human_review >= 0.50 or question_shape >= 0.50 or solicitation >= 0.40",
+            "deny": "otherwise",
+        },
+        "norm_version": jev.NORM_VERSION,
+        "example_snapshot_id": jev.EXAMPLE_SNAPSHOT_ID,
+    }
+
+
+@app.get("/api/metrics")
+def metrics():
+    totals = rows(
+        """SELECT
+        (SELECT COUNT(*) FROM inbox_events) AS events,
+        (SELECT COUNT(*) FROM decisions) AS decisions,
+        (SELECT COUNT(*) FROM event_transitions) AS transitions,
+        (SELECT COUNT(*) FROM action_intents) AS actions,
+        (SELECT COUNT(*) FROM overrides) AS overrides,
+        (SELECT COUNT(*) FROM token_usage) AS llm_calls"""
+    )[0]
+    bands = rows("SELECT band, COUNT(*) AS n FROM decisions GROUP BY band")
+    actions = rows("SELECT status, COUNT(*) AS n FROM action_intents GROUP BY status")
+    transitions = rows("SELECT to_state, COUNT(*) AS n FROM event_transitions GROUP BY to_state ORDER BY n DESC")
+    return {"totals": totals, "bands": bands, "actions": actions, "transitions": transitions}
+
+
+@app.get("/api/usage")
+def usage():
+    return rows(
+        """SELECT provider, model, workflow, COUNT(*) AS calls, SUM(input_tokens) AS input_tokens,
+                  SUM(output_tokens) AS output_tokens, MAX(recorded_at) AS last_call
+           FROM token_usage GROUP BY provider, model, workflow ORDER BY last_call DESC"""
+    )
+
+
+@app.get("/live")
+def live():
+    return FileResponse(ROOT / "api" / "live.html")
+
+
+class IngestRequest(BaseModel):
+    text: str
+    author_id: str = "demo-user"
+    platform: str = "telegram"
+    community_id: str = "tg:maplenest"
+    channel_id: str = "demo-channel"
+
+
+@app.post("/api/ingest")
+def ingest(request: IngestRequest):
+    import uuid
+
+    from app.graph import build_graph
+    from app.state import now
+
+    event_id = f"demo-{uuid.uuid4().hex[:8]}"
+    event = {
+        "event_id": event_id,
+        "platform": request.platform,
+        "community_id": request.community_id,
+        "channel_id": request.channel_id,
+        "message_id": event_id,
+        "author_id": request.author_id,
+        "author_joined_at": "2026-09-01T09:00:00+05:30",
+        "text": request.text,
+        "occurred_at": now(),
+    }
+    graph = build_graph()
+    final = graph.invoke({"event": event, "transitions": [], "admin_verdict": None}, {"configurable": {"thread_id": event_id}})
+    decision = final.get("decision", {})
+    return {
+        "event_id": event_id,
+        "band": decision.get("band"),
+        "verdict": decision.get("verdict"),
+        "confidence": decision.get("confidence"),
+        "reason": decision.get("reason"),
+        "transitions": [t["to_state"] for t in final.get("transitions", [])],
+    }
 
 
 @app.get("/api/stream")

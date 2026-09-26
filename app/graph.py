@@ -78,6 +78,15 @@ def classify(state: AgentState) -> AgentState:
     con.close()
     state["signals"] = results
     state["jev"] = jev_result
+    usage = jev_result.get("usage") or {}
+    if usage:
+        con = db.connect()
+        con.execute(
+            "INSERT INTO token_usage (provider, model, workflow, input_tokens, output_tokens, recorded_at) VALUES (?,?,?,?,?,?)",
+            ("jev", jev_result.get("model_id"), "classify", usage.get("input_tokens"), usage.get("output_tokens"), now()),
+        )
+        con.commit()
+        con.close()
     names = [r["id"] for r in results] + [f"jev:{name}" for name in (jev_result.get("scores") or {}).keys()]
     record(state, "signals_ready", ",".join(names))
     return state

@@ -84,6 +84,7 @@ def run_classify(event_text: str) -> dict:
             "needs_human_review": float(answers["needs_human_review"]["noul"]),
         }
         result["model_id"] = raw.get("model", MODEL)
+        result["usage"] = raw.get("usage", {})
     except (KeyError, TypeError, ValueError):
         result.update(
             result_status="parse_error",
