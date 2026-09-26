@@ -3,19 +3,24 @@
 	import CountsRow from '$lib/CountsRow.svelte';
 	import EventsList from '$lib/EventsList.svelte';
 	import CaseCard from '$lib/CaseCard.svelte';
+	import ExecLog from '$lib/ExecLog.svelte';
+	import StageFlow from '$lib/StageFlow.svelte';
+	import TryGate from '$lib/TryGate.svelte';
 	import {
 		DEFAULT_COMMUNITY,
 		STREAM_URL,
 		fetchCounts,
 		fetchEvents,
+		fetchMetrics,
 		fetchTrace,
 		resolveCase,
 		type Counts,
 		type EventRow,
+		type Metrics,
 		type Trace
 	} from '$lib/api';
-
 	let counts = $state<Counts | null>(null);
+	let metrics = $state<Metrics | null>(null);
 	let events = $state<EventRow[] | null>(null);
 	let traces = $state<Record<string, Trace>>({});
 	let error = $state<string | null>(null);
@@ -50,11 +55,13 @@
 
 	async function refresh(signal?: AbortSignal) {
 		try {
-			const [c, ev] = await Promise.all([
+			const [c, ev, m] = await Promise.all([
 				fetchCounts(DEFAULT_COMMUNITY, signal),
-				fetchEvents(DEFAULT_COMMUNITY, 20, signal)
+				fetchEvents(DEFAULT_COMMUNITY, 20, signal),
+				fetchMetrics(signal)
 			]);
 			counts = c;
+			metrics = m;
 			events = ev;
 			lastSync = Date.now();
 			stale = false;
@@ -130,8 +137,10 @@
 	{/if}
 
 	<CountsRow {counts} />
+	<TryGate onIngested={() => void refresh()} />
+	<StageFlow {metrics} />
 	<EventsList {events} {now} />
-
+	<ExecLog events={events ?? []} {traces} {now} />
 	<section id="queue" aria-label="Quarantine queue" class="flex flex-col gap-4">
 		<h2 class="text-base font-semibold tabular-nums">
 			Quarantine ({quarantined.length})
