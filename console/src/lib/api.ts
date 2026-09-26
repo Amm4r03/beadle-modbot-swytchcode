@@ -88,3 +88,31 @@ export const fetchEvents = (community: string, limit = 50, signal?: AbortSignal)
 
 export const fetchTrace = (eventId: string, signal?: AbortSignal) =>
 	get<Trace>(`/api/trace/${encodeURIComponent(eventId)}`, signal);
+
+export interface ResolveBody {
+	verdict: string;
+	reason_code?: string;
+	admin_user_id?: string;
+	resulting_action?: string;
+}
+
+export interface ResolveResult {
+	ok: boolean;
+	override_id: number;
+	cards_updated: number;
+}
+
+export async function resolveCase(
+	eventId: string,
+	body: ResolveBody,
+	signal?: AbortSignal
+): Promise<ResolveResult> {
+	const res = await fetch(`${API_BASE}/api/quarantine/${encodeURIComponent(eventId)}/resolve`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body),
+		signal
+	});
+	if (!res.ok) throw new Error(`API ${res.status} on resolve ${eventId}`);
+	return (await res.json()) as ResolveResult;
+}
