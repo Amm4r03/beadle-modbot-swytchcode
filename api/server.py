@@ -315,6 +315,16 @@ def platforms():
     return out
 
 
+@app.get("/api/alerts")
+def alerts(limit: int = Query(20, le=100)):
+    return rows(
+        """SELECT id, actor, action, detail_json, created_at FROM audit
+           WHERE action IN ('escalation_alert', 'quarantine_resolved')
+           ORDER BY id DESC LIMIT ?""",
+        (limit,),
+    )
+
+
 @app.get("/api/learning")
 def learning():
     counts = rows(
