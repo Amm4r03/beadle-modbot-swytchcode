@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+import sqlite3
+import sys
+from pathlib import Path
+
+DB = Path(__file__).resolve().parent.parent / "data" / "state.db"
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("usage: scripts/trace <event_id>")
+        return 2
+    event_id = sys.argv[1]
+    con = sqlite3.connect(f"file:{DB}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    print(f"== {event_id} ==")
+    print("transitions:")
+    for r in con.execute(
+        "SELECT to_state, reason_code, occurred_at FROM event_transitions WHERE event_id=? ORDER BY id", (event_id,)
+    ):
+        print(f"  {r['occurred_at']}  -> {r['to_state']} ({r['reason_code']})")
+    print("decision:")
+    for r in con.execute(
+        "SELECT band, verdict, confidence, reason, prompt_version, result_status FROM decisions WHERE event_id=? ORDER BY id DESC LIMIT 1",
+        (event_id,),
+    ):
+        print(f"  {r['band']}:{r['verdict']}  conf={r['confidence']:.2f}  [{r['prompt_version']}/{r['result_status']}]")
+        print(f"  reason: {r['reason']}")
+    print("actions:")
+    for r in con.execute(
+        "SELECT action_type, status, idempotency_key FROM action_intents WHERE event_id=? ORDER BY created_at", (event_id,)
+    ):
+        print(f"  {r['action_type']} [{r['status']}] {r['idempotency_key']}")
+    con.close()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

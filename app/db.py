@@ -99,6 +99,14 @@ CREATE TABLE IF NOT EXISTS learned_config (
   config_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE VIEW IF NOT EXISTS event_trace AS
+SELECT t.event_id, t.occurred_at, t.from_state, t.to_state, t.reason_code,
+       d.verdict, d.band, d.confidence, d.reason AS decision_reason,
+       d.prompt_version, d.prompt_hash, d.model_id, d.result_status,
+       a.action_type, a.status AS action_status, a.idempotency_key
+FROM event_transitions t
+LEFT JOIN decisions d ON d.event_id = t.event_id
+LEFT JOIN action_intents a ON a.event_id = t.event_id;
 """
 
 
