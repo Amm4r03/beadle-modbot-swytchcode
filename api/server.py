@@ -76,11 +76,13 @@ def counts(community_id: str):
 def events(community_id: str, limit: int = Query(50, le=200)):
     return rows(
         """SELECT e.id AS event_id, e.platform, e.received_at, n.text, n.author_id,
-                  d.verdict, d.band, d.confidence, d.reason
+                  d.verdict, d.band, d.confidence, d.reason,
+                  a.status AS card_status
            FROM inbox_events e
            LEFT JOIN normalized_events n ON n.event_id = e.id
            LEFT JOIN decisions d ON d.event_id = e.id
              AND d.id = (SELECT MAX(id) FROM decisions WHERE event_id = e.id)
+           LEFT JOIN action_intents a ON a.event_id = e.id AND a.action_type = 'mod_queue_card'
            WHERE e.community_id = ?
            ORDER BY e.received_at DESC, e.id DESC LIMIT ?""",
         (community_id, limit),
