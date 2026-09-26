@@ -111,8 +111,20 @@ def connect(path: Path = STATE_DB) -> sqlite3.Connection:
     return con
 
 
+DECISION_MIGRATIONS = [
+    ("prompt_hash", "TEXT"),
+    ("norm_version", "TEXT"),
+    ("example_snapshot_id", "TEXT"),
+    ("result_status", "TEXT"),
+]
+
+
 def init_state_db() -> None:
     con = connect()
     con.executescript(SCHEMA)
+    existing = {row[1] for row in con.execute("PRAGMA table_info(decisions)")}
+    for column, ddl in DECISION_MIGRATIONS:
+        if column not in existing:
+            con.execute(f"ALTER TABLE decisions ADD COLUMN {column} {ddl}")
     con.commit()
     con.close()

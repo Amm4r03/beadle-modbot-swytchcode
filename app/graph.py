@@ -6,7 +6,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
 from app import db, jev, signals
-from app.state import AgentState, transition
+from app.state import AgentState, now, transition
 
 GATE_VERSION = "gate-v0.1"
 POLICY_VERSION = "policy-v0.1"
@@ -36,28 +36,54 @@ def observe(state: AgentState) -> AgentState:
 def classify(state: AgentState) -> AgentState:
     event = state["event"]
     results = signals.run_signals(event)
+    jev_result = jev.run_classify(event.get("text", ""))
     con = db.connect()
     for result in results:
         con.execute(
             "INSERT OR REPLACE INTO signal_runs (event_id, signal_version, result_json, evaluated_at) VALUES (?,?,?,?)",
             (event["event_id"], f"{result['id']}@{result['version']}", json.dumps(result), result["evaluated_at"]),
         )
+    for name, value in (jev_result.get("scores") or {}).items():
+        con.execute(
+            "INSERT OR REPLACE INTO signal_runs (event_id, signal_version, result_json, evaluated_at) VALUES (?,?,?,?)",
+            (
+                event["event_id"],
+                f"{name}@{jev_result['prompt_version']}",
+                json.dumps(
+                    {
+                        "signal": name,
+                        "value": value,
+                        "model_id": jev_result.get("model_id"),
+                        "prompt_hash": jev_result.get("prompt_hash"),
+                        "result_status": jev_result.get("result_status"),
+                    }
+                ),
+                now(),
+            ),
+        )
     con.commit()
     con.close()
     state["signals"] = results
-    transition(state, "signals_ready", ",".join(r["id"] for r in results))
+    state["jev"] = jev_result
+    names = [r["id"] for r in results] + [f"jev:{name}" for name in (jev_result.get("scores") or {}).keys()]
+    transition(state, "signals_ready", ",".join(names))
     return state
 
 
 def gate(state: AgentState) -> AgentState:
     event = state["event"]
-    verdict = jev.evaluate(event.get("text", ""))
+    jev_result = state.get("jev", {})
+    verdict = jev.reduce_gate(jev_result)
     decision = {
         "event_id": event["event_id"],
         "policy_version": POLICY_VERSION,
         "gate_version": GATE_VERSION,
         "model_id": verdict["model_id"],
-        "prompt_version": "gate-questions-v0.1",
+        "prompt_version": jev_result.get("prompt_version"),
+        "prompt_hash": jev_result.get("prompt_hash"),
+        "norm_version": jev.NORM_VERSION,
+        "example_snapshot_id": jev.EXAMPLE_SNAPSHOT_ID,
+        "result_status": jev_result.get("result_status"),
         "verdict": verdict["verdict"],
         "band": verdict["band"],
         "confidence": verdict["confidence"],
@@ -67,8 +93,23 @@ def gate(state: AgentState) -> AgentState:
     }
     con = db.connect()
     con.execute(
-        "INSERT INTO decisions (event_id, policy_version, gate_version, model_id, prompt_version, verdict, band, confidence, reason, context_refs_json, decided_at) VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))",
-        (decision["event_id"], decision["policy_version"], decision["gate_version"], decision["model_id"], decision["prompt_version"], decision["verdict"], decision["band"], decision["confidence"], decision["reason"], json.dumps(decision["retrieved_ids"])),
+        "INSERT INTO decisions (event_id, policy_version, gate_version, model_id, prompt_version, verdict, band, confidence, reason, context_refs_json, prompt_hash, norm_version, example_snapshot_id, result_status, decided_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))",
+        (
+            decision["event_id"],
+            decision["policy_version"],
+            decision["gate_version"],
+            decision["model_id"],
+            decision["prompt_version"],
+            decision["verdict"],
+            decision["band"],
+            decision["confidence"],
+            decision["reason"],
+            json.dumps(decision["retrieved_ids"]),
+            decision["prompt_hash"],
+            decision["norm_version"],
+            decision["example_snapshot_id"],
+            decision["result_status"],
+        ),
     )
     con.commit()
     con.close()

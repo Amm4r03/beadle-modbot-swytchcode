@@ -32,6 +32,10 @@ class Decision(TypedDict, total=False):
     gate_version: str
     model_id: str
     prompt_version: str
+    prompt_hash: str
+    norm_version: str
+    example_snapshot_id: str
+    result_status: str
     verdict: Literal["answer", "quarantine", "review", "no_action"]
     band: Literal["AUTO", "DRAFT", "DENY"]
     confidence: float
@@ -44,6 +48,7 @@ class Decision(TypedDict, total=False):
 class AgentState(TypedDict, total=False):
     event: Event
     signals: list[SignalResult]
+    jev: dict
     decision: Decision
     action: dict
     admin_verdict: dict | None

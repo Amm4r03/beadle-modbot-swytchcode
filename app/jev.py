@@ -1,9 +1,14 @@
+import hashlib
+import json
 import os
 
 import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
+PROMPT_VERSION = "classify-v0.2"
+NORM_VERSION = "norms-v0.1"
+EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 
 
 class JevBlocked(Exception):
@@ -29,42 +34,80 @@ def score(state_text: str, questions: dict, model: str | None = None, timeout: f
     return response.json()
 
 
-def gate_questions() -> dict:
+def classify_questions() -> dict:
     return {
         "solicitation": {
             "type": "noul",
-            "instructions": "Does this message seek money, wallet credentials, or push users to an off-platform verification or claim link under a false premise? A member warning others ABOUT a scam is not a scam.",
+            "instructions": "Does the author seek to move readers toward an offer, payment, contact, external signup, or promotion? Judge the text and context, not whether it has a question mark. A genuine request for community help without a call to buy/contact/sign up is false.",
         },
         "question_shape": {
             "type": "noul",
-            "instructions": "Is this a genuine community question seeking help or advice, as opposed to a solicitation or announcement disguised as a question?",
+            "instructions": "Is the main intent a genuine request for help or information in this community, rather than an offer or engagement bait? A question mark alone is insufficient.",
         },
         "needs_human_review": {
             "type": "noul",
-            "instructions": "Does acting on this message require human moderator judgment before any action is taken?",
+            "instructions": "Is a moderator needed because the relevant meaning or applicable community norm is materially uncertain, sensitive, or disputed? Do not infer this merely because a score is near a threshold; the reducer handles score bands.",
         },
     }
 
 
-def evaluate(event_text: str) -> dict:
+def prompt_hash() -> str:
+    canonical = json.dumps(classify_questions(), sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def run_classify(event_text: str) -> dict:
+    result = {
+        "prompt_version": PROMPT_VERSION,
+        "prompt_hash": prompt_hash(),
+        "model_id": MODEL,
+        "result_status": "ok",
+        "scores": {},
+        "degraded": False,
+        "error": None,
+    }
     try:
-        raw = score(event_text, gate_questions())
+        raw = score(event_text, classify_questions())
     except Exception as error:
+        result.update(
+            result_status="timeout" if isinstance(error, httpx.TimeoutException) else "error",
+            degraded=True,
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None},
+            error=f"{type(error).__name__}: {str(error)[:120]}",
+        )
+        return result
+    answers = raw.get("answers", {})
+    try:
+        result["scores"] = {
+            "solicitation": float(answers["solicitation"]["noul"]),
+            "question_shape": float(answers["question_shape"]["noul"]),
+            "needs_human_review": float(answers["needs_human_review"]["noul"]),
+        }
+        result["model_id"] = raw.get("model", MODEL)
+    except (KeyError, TypeError, ValueError):
+        result.update(
+            result_status="parse_error",
+            degraded=True,
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None},
+            error="missing or malformed noul value",
+        )
+    return result
+
+
+def reduce_gate(jev_result: dict) -> dict:
+    scores = jev_result.get("scores", {})
+    scam_p = scores.get("solicitation")
+    question_p = scores.get("question_shape")
+    review_p = scores.get("needs_human_review")
+    if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None:
         return {
             "verdict": "review",
             "band": "DRAFT",
             "confidence": 0.0,
-            "reason": f"gate unavailable - fail closed to human review ({type(error).__name__}: {str(error)[:120]})",
-            "scores": {"scam_p": None, "question_p": None, "review_p": None},
-            "model_id": MODEL,
-            "degraded": True,
+            "reason": f"gate: fail closed to human review (classify {jev_result.get('result_status', 'error')})",
+            "scores": scores,
+            "model_id": jev_result.get("model_id"),
         }
-    answers = raw.get("answers", {})
-    scam_p = float(answers.get("solicitation", {}).get("noul", 0.0))
-    question_p = float(answers.get("question_shape", {}).get("noul", 0.0))
-    review_p = float(answers.get("needs_human_review", {}).get("noul", 0.0))
-    model_id = raw.get("model", MODEL)
-
     if scam_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: solicitation probability {scam_p:.2f} at/above 0.70 - quarantine for review"
@@ -77,12 +120,11 @@ def evaluate(event_text: str) -> dict:
     else:
         verdict, band = "no_action", "DENY"
         reason = f"gate: no action warranted (solicitation {scam_p:.2f}, question {question_p:.2f})"
-
     return {
         "verdict": verdict,
         "band": band,
         "confidence": max(scam_p, question_p, review_p),
         "reason": reason,
-        "scores": {"scam_p": scam_p, "question_p": question_p, "review_p": review_p},
-        "model_id": model_id,
+        "scores": scores,
+        "model_id": jev_result.get("model_id"),
     }
