@@ -6,13 +6,10 @@ never invented from the docs.
 
 | Class | Example questions | Docs |
 |---|---|---|
-| plant-care | yellow leaves, spots after rain, pruning timing, light | `yellow-tomato-leaves`, `watering-schedule` |
-| watering | how often, hard water, monsoon changes, succulents | `watering-schedule` |
-| pests | mealybugs, aphids, fungus gnats, treatment | `neem-oil-buying`, `yellow-tomato-leaves` |
-| buying-local | where to buy neem oil, fair prices, nurseries | `neem-oil-buying` |
 | community-info | what is GDG, GDG Cloud New Delhi, who runs it | `gdg-what-is`, `gdg-cloud-new-delhi` |
 | events | how to join, find events, RSVP, event formats, DevFest | `gdg-how-to-join`, `gdg-events`, `gdg-cloud-new-delhi` |
 | volunteering | volunteer, speak, propose a talk, organize, GDE | `gdg-volunteer-speaking` |
+| conduct | code of conduct, community guidelines, reporting | `gdg-code-of-conduct` |
 
 How it works:
 1. `classify` asks Jev whether the message is a genuine question (question_shape).
