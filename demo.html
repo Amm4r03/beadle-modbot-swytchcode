@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beadle — product walkthrough</title>
+<style>
+  :root { --bg:#0b0e13; --panel:#131823; --line:#232c3d; --text:#e6ecf5; --dim:#8b98ad; --green:#3ecf8e; --amber:#e8b84b; --red:#e8615a; --accent:#7aa2f7; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .wrap { max-width:980px; margin:0 auto; padding:40px 24px 80px; }
+  h1 { font-size:30px; margin:0 0 6px; }
+  h2 { font-size:14px; text-transform:uppercase; letter-spacing:1.4px; color:var(--dim); margin:44px 0 14px; }
+  h3 { font-size:15px; margin:0 0 6px; }
+  p { margin:8px 0; }
+  .sub { color:var(--dim); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:18px; }
+  .grid { display:grid; gap:12px; }
+  .stages { grid-template-columns:repeat(3,1fr); }
+  .stage { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  .stage .tag { font-size:11px; color:var(--accent); letter-spacing:1px; }
+  .stage .prompt { color:var(--dim); font-size:12.5px; margin-top:6px; }
+  .flow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:16px 0; }
+  .node { border:1px solid var(--line); background:var(--panel); padding:8px 12px; border-radius:8px; font-size:13px; }
+  .node.active { border-color:var(--accent); color:var(--accent); }
+  .arrow { color:var(--dim); }
+  button { background:var(--accent); border:0; color:#0b0e13; font-weight:700; border-radius:8px; padding:10px 16px; cursor:pointer; font-family:inherit; }
+  pre { white-space:pre-wrap; background:#0b0e13; border:1px solid var(--line); border-radius:8px; padding:12px; font-size:12.5px; }
+  .chip { padding:2px 8px; border-radius:99px; font-size:11px; border:1px solid var(--line); }
+  .AUTO { color:var(--green); border-color:var(--green); }
+  .DRAFT { color:var(--amber); border-color:var(--amber); }
+  .DENY { color:var(--red); border-color:var(--red); }
+  a { color:var(--accent); }
+  .honest { border-left:3px solid var(--amber); padding-left:12px; color:var(--dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Beadle</h1>
+  <p class="sub">The moderation and community growth agent · Track 3 · Swytchcode buildathon</p>
+  <p>One shared agent state machine watches a community, judges every message with calibrated probabilities, acts inside policy, asks a human when unsure, and <b>learns from every admin decision</b>.</p>
+  <p class="sub">Demo moment: a genuine question gets answered while a polished scam is quarantined — same second, opposite outcomes, with the reason and the gate score on screen.</p>
+
+  <h2>1 · The state machine — what happens at each stage</h2>
+  <div class="grid stages">
+    <div class="stage"><div class="tag">OBSERVE</div><h3>Normalize + dedupe</h3><div class="prompt">No model call. Stable event ID, platform mapping, duplicate protection. Every event is written to the ledger before anything else.</div></div>
+    <div class="stage"><div class="tag">CLASSIFY</div><h3>Signals + one Jev call</h3><div class="prompt">8 deterministic signals (member_new, first_link, rate_burst, duplicate_payload, domain_allow_or_block, known_trust_or_override, solicitation, question_shape) + <b>one batched Jev call</b> with three typed questions: <i>solicitation</i>, <i>question_shape</i>, <i>needs_human_review</i>. Each answer is stored with its prompt hash and model.</div></div>
+    <div class="stage"><div class="tag">GATE</div><h3>Pure reducer — no model</h3><div class="prompt">solicitation ≥ 0.70 → quarantine · question_shape ≥ 0.85 + solicitation ≤ 0.10 + review &lt; 0.50 → answer · otherwise review/deny. A fixed reason template names the decisive signals. Fail-closed: no Jev → human review.</div></div>
+    <div class="stage"><div class="tag">ESCALATE</div><h3>Quarantine card</h3><div class="prompt">No model call. The held case carries: event excerpt, gate score vs threshold, reason, model + prompt version, evidence IDs. A card is evidence for a human, not a verdict.</div></div>
+    <div class="stage"><div class="tag">RESOLVE</div><h3>Answer + execution</h3><div class="prompt">Answer drafting runs on the generation chain (Groq) only after the gate allows it — strict JSON, citations only from retrieved sources. Actions leave through the outbox into Swytchcode.</div></div>
+    <div class="stage"><div class="tag">LEARN</div><h3>Every decision is a label</h3><div class="prompt">No model call to store. An admin resolution becomes a labeled example; later, similar cases retrieve it and cite it — "because you taught me". No auto-promotion of examples into rules.</div></div>
+  </div>
+
+  <h2>2 · How an event moves through the machine</h2>
+  <div class="flow" id="flow">
+    <span class="node" data-stage="received">observe</span><span class="arrow">→</span>
+    <span class="node" data-stage="signals_ready">classify</span><span class="arrow">→</span>
+    <span class="node" data-stage="decided">gate</span><span class="arrow">→</span>
+    <span class="node" data-stage="approval_pending">escalate</span><span class="arrow">→</span>
+    <span class="node" data-stage="action_pending">resolve</span><span class="arrow">→</span>
+    <span class="node" data-stage="recorded">learn</span>
+  </div>
+  <p><button id="sim">▶ Simulate an event (time flows)</button> <span class="sub" id="simstate">staged input · scores are from real recorded runs</span></p>
+  <pre id="simout">Press simulate: a scam message walks the machine with its real recorded numbers (solicitation 0.98 → quarantine), then a genuine question (question_shape 0.94 → answer).</pre>
+
+  <h2>3 · The learning loop</h2>
+  <div class="panel">
+    <p>1 · The gate quarantines an uncertain case → 2 · the admin resolves it with a label and a reason → 3 · the resolution is written back as a labeled example (event id, gate score, decision, timestamp) → 4 · a later, <b>distinct</b> case retrieves that example and the case card shows both IDs and what was carried over.</p>
+    <p class="sub">The card is the proof: two real records, zero fabricated IDs. Nothing is auto-promoted into a rule; a learned exception can never defeat an explicit block.</p>
+  </div>
+
+  <h2>4 · The live execution chain (Swytchcode)</h2>
+  <div class="panel">
+    <p><span class="chip AUTO">LIVE</span> <b>Notion report</b> — decision report page created: <code>3e781f99-…-d70bdd387229</code></p>
+    <p><span class="chip AUTO">LIVE</span> <b>Slack escalation</b> — message posted citing the report: <code>ts 1790411848.603789</code></p>
+    <p><span class="chip AUTO">LIVE</span> <b>Resend digest</b> — "Beadle Agent" email with origin (platform · community · event): <code>01a0dcdc-…</code></p>
+    <p class="sub">Three distinct providers, each call's output feeding the next. Discord (OAuth) and Telegram (bundle bug) are documented blockers; Telegram runs on its direct Bot API and is never counted as Swytchcode-mediated.</p>
+  </div>
+
+  <h2>5 · See it live</h2>
+  <div class="panel">
+    <p><a href="http://localhost:8788/live">/live</a> — live agent view: metrics, prompts, event trails, mock chat (send a message through the agent).</p>
+    <p><a href="http://localhost:5173/admin">/admin</a> — admin console: counts, events, quarantine review, trace view.</p>
+    <p class="sub">POST http://localhost:8788/api/ingest {"text": "..."} — inject any message into the running agent.</p>
+  </div>
+
+  <h2>Honesty</h2>
+  <p class="honest">The community is staged; the writes are live. Gate scores are shown with their thresholds — they are not calibration claims. Three live samples are not accuracy evidence. Everything else on this page was run today on this machine.</p>
+</div>
+
+<script>
+const SCENARIOS = [
+  { text: "URGENT: MapleNest is migrating! Verify your wallet to keep your membership + claim 50 MAPLE tokens 👉 maplenest-verify[.]xyz", stages: ["received","signals_ready","decided","approval_pending","recorded"], band: "DRAFT", verdict: "quarantine", conf: 0.98, reason: "gate: solicitation probability 0.98 at/above 0.70 — quarantine for review" },
+  { text: "hey! my balcony tomatoes got these yellow spots after the rain last week — anyone dealt with this?", stages: ["received","signals_ready","decided","action_pending","recorded"], band: "AUTO", verdict: "answer", conf: 0.94, reason: "gate: genuine question probability 0.94 at/above 0.85, solicitation 0.05 at/below 0.10 — answer" },
+];
+let running = false;
+document.getElementById("sim").addEventListener("click", async () => {
+  if (running) return; running = true;
+  const out = document.getElementById("simout");
+  const nodes = [...document.querySelectorAll("#flow .node")];
+  for (const sc of SCENARIOS) {
+    nodes.forEach(n => n.classList.remove("active"));
+    out.textContent = "staged input: " + sc.text;
+    for (const stage of sc.stages) {
+      const node = nodes.find(n => n.dataset.stage === stage);
+      if (node) node.classList.add("active");
+      await new Promise(r => setTimeout(r, 650));
+    }
+    out.textContent += `\n→ ${sc.band}:${sc.verdict}  conf ${sc.conf}\n   ${sc.reason}\n`;
+    await new Promise(r => setTimeout(r, 900));
+  }
+  out.textContent += "\nBoth trails were recorded from real runs (scores from live Jev). This page simulates time; /live shows the real thing.";
+  running = false;
+});
+</script>
+</body>
+</html>
