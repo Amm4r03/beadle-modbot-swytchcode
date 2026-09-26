@@ -60,6 +60,13 @@ def main() -> None:
                 if band == "AUTO" and draft.get("text"):
                     bot.send_message(event["channel_id"], draft["text"], reply_to_message_id=reply_to)
                     print("   replied with drafted answer")
+                elif band == "AUTO":
+                    bot.send_message(
+                        event["channel_id"],
+                        "I couldn't answer this from the knowledge base - passing it to a human moderator.",
+                        reply_to_message_id=reply_to,
+                    )
+                    print("   replied: no grounded answer - passed to moderator")
                 elif band == "DRAFT":
                     if "threat" in decision.get("reason", ""):
                         try:

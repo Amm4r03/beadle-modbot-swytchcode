@@ -21,7 +21,7 @@ BLOCKED_DOMAINS = frozenset(
 RATE_WINDOW_MINUTES = 10
 RATE_BURST_THRESHOLD = 5
 DUPLICATE_THRESHOLD = 2
-THREAT_RE = re.compile(r"\b(delete|destroy|shut\s?down|burn|kill|nuke|raid)\b[^.!?]{0,30}\b(community|group|server|channel|chat)\b", re.I)
+THREAT_RE = re.compile(r"\b(delete|destroy|shut\s?down|burn|kill|nuke|raid|dox|doxx?)\b[^.!?]{0,30}\b(community|group|server|channel|chat|account|accounts|you|member|members|user|users)\b", re.I)
 
 
 def _domains(text: str) -> list[str]:
