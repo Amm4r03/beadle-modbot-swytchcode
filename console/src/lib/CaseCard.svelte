@@ -20,7 +20,7 @@
 		AlertDialogTrigger
 	} from '$lib/components/ui/alert-dialog/index.js';
 	import { linkifyEvidence, thresholdFromReason, timeAgo } from '$lib/format';
-	import type { EventRow, Trace } from '$lib/api';
+	import { latestSignals, type EventRow, type Trace } from '$lib/api';
 
 	let {
 		event,
@@ -43,6 +43,7 @@
 
 	const latest = $derived(trace?.decisions?.[0] ?? null);
 	const threshold = $derived(thresholdFromReason(latest?.reason ?? event.reason));
+	const signals = $derived(trace ? latestSignals(trace.signals) : []);
 </script>
 
 <Card id="event-{event.event_id}">
@@ -110,10 +111,10 @@
 					</AccordionContent>
 				</AccordionItem>
 				<AccordionItem value="signals">
-					<AccordionTrigger>Signals ({trace.signals.length})</AccordionTrigger>
+					<AccordionTrigger>Signals ({signals.length})</AccordionTrigger>
 					<AccordionContent>
 						<ul class="flex flex-col gap-1">
-							{#each trace.signals as s (s.signal_version)}
+							{#each signals as s (s.signal_version)}
 								<li class="text-xs text-muted-foreground">
 									<span class="font-medium text-foreground">{s.signal_version}</span>
 									· {s.evaluated_at}
