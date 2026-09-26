@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 import time
 from pathlib import Path
@@ -247,6 +248,28 @@ def ingest(request: IngestRequest):
     graph = build_graph()
     final = graph.invoke({"event": event, "transitions": [], "admin_verdict": None}, {"configurable": {"thread_id": event_id}})
     decision = final.get("decision", {})
+    scores = (final.get("jev") or {}).get("scores", {}) or {}
+    draft = final.get("draft") or {}
+    path = " → ".join(t["to_state"] for t in final.get("transitions", []))
+    reasoning = (
+        f"Beadle reasoning log\nEvent: {event_id}\n"
+        f"Path: {path}\n"
+        f"solicitation {scores.get('solicitation')} · question {scores.get('question_shape')} · review {scores.get('needs_human_review')}\n"
+        f"Decision: {decision.get('band')}:{decision.get('verdict')} (conf {decision.get('confidence')})\n"
+        f"Reason: {decision.get('reason')}"
+    )
+    if draft.get("text"):
+        reasoning += f"\nDraft: {draft['text'][:400]}\nSources: {','.join(draft.get('source_ids') or [])}"
+    from app import swytchcode as swy_client
+
+    for channel in (os.environ.get("SLACK_REASONING_CHANNEL"), os.environ.get("SLACK_CHANNEL_ID")):
+        if not channel:
+            continue
+        try:
+            swy_client.post_slack_message(channel, reasoning)
+            break
+        except Exception:
+            continue
     return {
         "event_id": event_id,
         "band": decision.get("band"),

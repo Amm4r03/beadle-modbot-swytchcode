@@ -68,7 +68,11 @@ def post_discord_message(channel_id: str, content: str, dry_run: bool = False) -
 
 
 def post_slack_message(channel: str, text: str, dry_run: bool = False) -> dict:
-    return exec_action("slack.chat.postmessage.create", body={"channel": channel, "text": text}, dry_run=dry_run)
+    result = exec_action("slack.chat.postmessage.create", body={"channel": channel, "text": text}, dry_run=dry_run)
+    data = result.get("data") or {}
+    if data.get("ok") is False:
+        raise SwytchcodeError(f"slack error: {data.get('error')}")
+    return result
 
 
 def create_notion_page(parent_page_id: str, title: str, text: str, dry_run: bool = False) -> dict:
