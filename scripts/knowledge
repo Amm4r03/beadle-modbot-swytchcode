@@ -1,0 +1,54 @@
+#!/usr/bin/env python3
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+from dotenv import load_dotenv
+
+load_dotenv(ROOT / ".env")
+
+from app import db, memory
+
+
+def seed() -> None:
+    db.init_state_db()
+    count = 0
+    for path in sorted((ROOT / "knowledge").glob("*.md")):
+        if path.stem == "INDEX":
+            continue
+        memory.remember(path.stem, path.stem.replace("-", " "), path.read_text())
+        count += 1
+    print(f"seeded {count} docs · store now {memory.count()} docs")
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("usage: scripts/knowledge seed | add <file.md> | search <query> | list")
+        return 2
+    command = sys.argv[1]
+    if command == "seed":
+        seed()
+        return 0
+    if command == "add":
+        path = Path(sys.argv[2])
+        db.init_state_db()
+        memory.remember(path.stem, path.stem.replace("-", " "), path.read_text())
+        print("added", path.stem)
+        return 0
+    if command == "search":
+        db.init_state_db()
+        for row in memory.recall(" ".join(sys.argv[2:]), k=3):
+            print(f"{row['doc_id']} · {row['title']} · score {row['score']:.2f}")
+        return 0
+    if command == "list":
+        db.init_state_db()
+        print("docs:", memory.count())
+        return 0
+    print("unknown command")
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

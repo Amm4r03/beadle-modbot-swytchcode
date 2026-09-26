@@ -95,6 +95,32 @@ def run_classify(event_text: str) -> dict:
     return result
 
 
+def check_answerable(question: str, passages: list[dict]) -> dict:
+    state_text = "QUESTION:\n" + question + "\n\nPASSAGES:\n" + "\n".join(
+        f"[{p['doc_id']}] {p['title']}: {p['text'][:600]}" for p in passages
+    )
+    questions = {
+        "internal_knowledge_question": {
+            "type": "noul",
+            "instructions": "Is this question about community-maintained topics (plant care, watering, pests, local buying) that a community knowledge base is meant to answer?",
+        },
+        "answerable": {
+            "type": "noul",
+            "instructions": "Is the QUESTION answerable using only the PASSAGES above? Judge only from the passages; if the passages do not contain the answer, answer false.",
+        },
+    }
+    try:
+        raw = score(state_text, questions)
+        return {
+            "internal_p": float(raw["answers"]["internal_knowledge_question"]["noul"]),
+            "answerable_p": float(raw["answers"]["answerable"]["noul"]),
+            "model_id": raw.get("model", MODEL),
+            "usage": raw.get("usage", {}),
+        }
+    except Exception as error:
+        return {"answerable_p": None, "model_id": MODEL, "error": f"{type(error).__name__}: {str(error)[:120]}"}
+
+
 def reduce_gate(jev_result: dict) -> dict:
     scores = jev_result.get("scores", {})
     scam_p = scores.get("solicitation")

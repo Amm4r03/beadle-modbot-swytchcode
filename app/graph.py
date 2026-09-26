@@ -5,7 +5,7 @@ import sqlite3
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
-from app import db, jev, signals
+from app import db, generate, jev, memory, signals
 from app.state import AgentState, now, transition
 
 GATE_VERSION = "gate-v0.1"
@@ -88,7 +88,40 @@ def classify(state: AgentState) -> AgentState:
         con.commit()
         con.close()
     names = [r["id"] for r in results] + [f"jev:{name}" for name in (jev_result.get("scores") or {}).keys()]
-    record(state, "signals_ready", ",".join(names))
+    knowledge = {"passages": [], "answerable_p": None}
+    question_p = (jev_result.get("scores") or {}).get("question_shape") or 0.0
+    if question_p >= 0.5:
+        passages = memory.recall(event.get("text", ""), k=3)
+        if passages:
+            check = jev.check_answerable(event.get("text", ""), passages)
+            knowledge = {
+                "passages": [p["doc_id"] for p in passages],
+                "answerable_p": check.get("answerable_p"),
+                "internal_p": check.get("internal_p"),
+            }
+            con = db.connect()
+            con.execute(
+                "INSERT OR REPLACE INTO signal_runs (event_id, signal_version, result_json, evaluated_at) VALUES (?,?,?,?)",
+                (
+                    event["event_id"],
+                    "knowledge_answer@v0.1",
+                    json.dumps({"signal": "knowledge_answer", "value": knowledge["answerable_p"], "passages": knowledge["passages"]}),
+                    now(),
+                ),
+            )
+            con.commit()
+            con.close()
+            if check.get("usage"):
+                con = db.connect()
+                con.execute(
+                    "INSERT INTO token_usage (provider, model, workflow, input_tokens, output_tokens, recorded_at) VALUES (?,?,?,?,?,?)",
+                    ("jev", check.get("model_id"), "knowledge_check", check["usage"].get("input_tokens"), check["usage"].get("output_tokens"), now()),
+                )
+                con.commit()
+                con.close()
+            names.append("knowledge_answer")
+    state["knowledge"] = knowledge
+    transition(state, "signals_ready", ",".join(names))
     return state
 
 
@@ -111,8 +144,11 @@ def gate(state: AgentState) -> AgentState:
         "confidence": verdict["confidence"],
         "reason": verdict["reason"],
         "signals_fired": [r["id"] for r in state.get("signals", []) if r["value"] == "TRUE"],
-        "retrieved_ids": [],
+        "retrieved_ids": state.get("knowledge", {}).get("passages", []),
     }
+    knowledge = state.get("knowledge", {})
+    if knowledge.get("answerable_p") is not None:
+        decision["reason"] += f" · knowledge answerable {knowledge['answerable_p']:.2f} ({','.join(knowledge.get('passages', []))})"
     con = db.connect()
     con.execute(
         "INSERT INTO decisions (event_id, policy_version, gate_version, model_id, prompt_version, verdict, band, confidence, reason, context_refs_json, prompt_hash, norm_version, example_snapshot_id, result_status, decided_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))",
@@ -137,6 +173,38 @@ def gate(state: AgentState) -> AgentState:
     con.close()
     state["decision"] = decision
     record(state, "decided", f"{decision['band']}:{decision['verdict']}")
+    return state
+
+
+def draft(state: AgentState) -> AgentState:
+    event = state["event"]
+    knowledge = state.get("knowledge", {})
+    doc_ids = knowledge.get("passages", [])
+    docs = [d for d in memory.recall(event.get("text", ""), k=3) if d["doc_id"] in doc_ids] if doc_ids else []
+    answerable = knowledge.get("answerable_p") or 0.0
+    internal = knowledge.get("internal_p") or 0.0
+    result = {
+        "text": "",
+        "source_ids": [],
+        "uncertainty": "not a knowledge question" if internal < 0.50 else "not answerable from the knowledge base",
+        "escalate": True,
+    }
+    if docs and answerable >= 0.70 and internal >= 0.50:
+        result = generate.draft_answer(event.get("text", ""), docs)
+    state["draft"] = result
+    con = db.connect()
+    con.execute(
+        "INSERT INTO audit (community_id, actor, action, detail_json, created_at) VALUES (?,?,?,?,datetime('now'))",
+        (event.get("community_id"), "beadle", "draft_answer", json.dumps({"event_id": event["event_id"], **result})),
+    )
+    con.commit()
+    con.close()
+    reason = (
+        f"faq draft from {','.join(result.get('source_ids') or [])}"
+        if result.get("source_ids")
+        else f"no doc-grounded draft ({result.get('uncertainty')})"
+    )
+    record(state, "drafted", reason)
     return state
 
 
@@ -204,13 +272,15 @@ def build_graph(checkpoint_path=db.CHECKPOINT_DB):
     builder.add_node("observe", observe)
     builder.add_node("classify", classify)
     builder.add_node("gate", gate)
+    builder.add_node("draft", draft)
     builder.add_node("escalate", escalate)
     builder.add_node("resolve", resolve)
     builder.add_node("learn", learn)
     builder.add_edge(START, "observe")
     builder.add_edge("observe", "classify")
     builder.add_edge("classify", "gate")
-    builder.add_conditional_edges("gate", route_after_gate, {"resolve": "resolve", "escalate": "escalate", "learn": "learn"})
+    builder.add_conditional_edges("gate", route_after_gate, {"resolve": "draft", "escalate": "escalate", "learn": "learn"})
+    builder.add_edge("draft", "resolve")
     builder.add_edge("escalate", "learn")
     builder.add_edge("resolve", "learn")
     builder.add_edge("learn", END)

@@ -99,6 +99,14 @@ CREATE TABLE IF NOT EXISTS learned_config (
   config_json TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS knowledge_docs (
+  doc_id TEXT PRIMARY KEY,
+  title TEXT,
+  text TEXT,
+  tags TEXT,
+  added_at TEXT NOT NULL
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS knowledge_fts USING fts5(doc_id UNINDEXED, title, text);
 CREATE VIEW IF NOT EXISTS event_trace AS
 SELECT t.event_id, t.occurred_at, t.from_state, t.to_state, t.reason_code,
        d.verdict, d.band, d.confidence, d.reason AS decision_reason,

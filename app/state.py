@@ -49,6 +49,8 @@ class AgentState(TypedDict, total=False):
     event: Event
     signals: list[SignalResult]
     jev: dict
+    knowledge: dict
+    draft: dict
     decision: Decision
     action: dict
     admin_verdict: dict | None
