@@ -307,6 +307,27 @@ def platforms():
     return out
 
 
+@app.get("/api/learning")
+def learning():
+    counts = rows(
+        """SELECT
+        (SELECT COUNT(*) FROM overrides) AS labeled_examples,
+        (SELECT COUNT(*) FROM decisions WHERE band = 'DRAFT') AS held_cases,
+        (SELECT COUNT(*) FROM decisions WHERE band = 'AUTO') AS auto_actions,
+        (SELECT COUNT(*) FROM audit WHERE action = 'escalation_alert') AS escalation_alerts,
+        (SELECT COUNT(*) FROM knowledge_docs) AS knowledge_docs"""
+    )[0]
+    overrides = rows(
+        "SELECT event_id, admin_user_id, verdict, reason_code, resulting_action, created_at FROM overrides ORDER BY id DESC LIMIT 20"
+    )
+    return {"counts": counts, "overrides": overrides, "retrieval": "not wired yet - next build", "thresholds": "frozen"}
+
+
+@app.get("/test/learning")
+def learning_view():
+    return FileResponse(ROOT / "api" / "learning.html")
+
+
 @app.get("/test")
 def test_view():
     return FileResponse(ROOT / "api" / "test.html")

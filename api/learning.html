@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beadle — the learning loop</title>
+<style>
+  :root { --bg:#0a0d12; --card:#121824; --line:#212b3d; --text:#e8eef8; --dim:#8b98ad; --green:#43d17f; --amber:#e8b84b; --accent:#7aa2f7; --soft:#1a2233; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(1100px 500px at 50% -180px, #131b2b 0%, var(--bg) 60%); color:var(--text); font:15px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; min-height:100vh; }
+  .wrap { max-width:900px; margin:0 auto; padding:36px 20px 80px; }
+  h1 { font-size:20px; margin:0 0 4px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:1.2px; color:var(--dim); margin:34px 0 12px; }
+  .sub { color:var(--dim); font-size:12.5px; }
+  .cards { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .card .n { font-size:22px; font-weight:700; }
+  .card .l { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.8px; }
+  .loop { display:flex; gap:8px; flex-wrap:wrap; align-items:stretch; margin-top:8px; }
+  .step { flex:1; min-width:150px; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .step b { display:block; font-size:13px; }
+  .step span { color:var(--dim); font-size:12px; }
+  .step.done { border-color:#2b4a37; }
+  .step.next { border-color:#5a4a1f; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px; }
+  th, td { border-bottom:1px solid var(--line); padding:7px 8px; text-align:left; }
+  th { color:var(--dim); font-weight:600; }
+  .pill { border:1px solid var(--line); background:var(--soft); border-radius:99px; padding:2px 8px; font-size:11px; color:var(--dim); }
+  .honest { border-left:3px solid var(--amber); padding-left:12px; color:var(--dim); margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Beadle — the learning loop</h1>
+  <div class="sub" id="stamp">loading…</div>
+
+  <h2>The loop, step by step</h2>
+  <div class="loop">
+    <div class="step done"><b>1 · decision</b><span>gate holds a case (DRAFT) with score + reason</span></div>
+    <div class="step done"><b>2 · admin resolve</b><span>approve / deny / edit with a reason (console)</span></div>
+    <div class="step done"><b>3 · labeled example</b><span>override row written: verdict, reason code, action</span></div>
+    <div class="step done"><b>4 · belief record</b><span>the example is the belief; policy stays versioned + frozen</span></div>
+    <div class="step next"><b>5 · retrieval (next)</b><span>later distinct cases will cite the example — not wired yet</span></div>
+  </div>
+
+  <h2>State right now</h2>
+  <div class="cards" id="cards"></div>
+
+  <h2>Labeled examples (admin overrides)</h2>
+  <table id="table"><thead><tr><th>Event</th><th>Admin</th><th>Verdict</th><th>Reason code</th><th>Action</th><th>When</th></tr></thead><tbody></tbody></table>
+  <div class="honest" id="honest">Retrieval of labeled examples into later decisions is the next build. Thresholds are frozen and described as an uncalibrated starting policy — no self-tuning claims.</div>
+</div>
+
+<script>
+const j = async (u) => (await fetch(u)).json();
+const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+async function load() {
+  const data = await j("/api/learning");
+  document.getElementById("stamp").textContent = "updated " + new Date().toLocaleTimeString() + " · thresholds: " + data.thresholds + " · retrieval: " + data.retrieval;
+  const c = data.counts;
+  document.getElementById("cards").innerHTML = [
+    ["labeled examples", c.labeled_examples], ["held cases", c.held_cases], ["auto actions", c.auto_actions],
+    ["escalation alerts", c.escalation_alerts], ["knowledge docs", c.knowledge_docs],
+  ].map(([l, n]) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`).join("");
+  document.querySelector("#table tbody").innerHTML = data.overrides.length
+    ? data.overrides.map((o) => `<tr><td>${esc(o.event_id)}</td><td>${esc(o.admin_user_id)}</td><td><span class="pill">${esc(o.verdict)}</span></td><td>${esc(o.reason_code || "—")}</td><td>${esc(o.resulting_action || "—")}</td><td>${esc(o.created_at)}</td></tr>`).join("")
+    : `<tr><td colspan="6" style="color:var(--dim)">No resolutions yet — resolve a held case in the console and it will appear here.</td></tr>`;
+}
+load();
+setInterval(load, 3000);
+</script>
+</body>
+</html>
