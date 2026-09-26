@@ -11,6 +11,8 @@ bridge/
 
 # --- local-only docs (personal info / internal comms) ---
 AGENTS.md
+.claude/
+.opencode/
 docs/HANDOFF.md
 docs/agent-comms.md
 docs/hackathon-ground-rules.md
