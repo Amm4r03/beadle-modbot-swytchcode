@@ -25,13 +25,20 @@
 		event,
 		trace,
 		now,
-		confirming
+		busy,
+		notice,
+		onResolve
 	}: {
 		event: EventRow;
 		trace: Trace | null;
 		now: number;
-		confirming: string | null;
+		busy: string | null;
+		notice: string | null;
+		onResolve: (eventId: string, verdict: 'approve' | 'deny' | 'edit', label?: string) => void;
 	} = $props();
+
+	let editing = $state(false);
+	let label = $state('');
 
 	const latest = $derived(trace?.decisions?.[0] ?? null);
 	const threshold = $derived(thresholdFromReason(latest?.reason ?? event.reason));
@@ -118,26 +125,62 @@
 		{/if}
 
 		{#if event.band === 'DRAFT'}
-			<div class="flex gap-2">
-				<Button size="sm">Approve</Button>
-				<AlertDialog>
-					<Button size="sm" variant="destructive">Deny</Button>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>Deny this case?</AlertDialogTitle>
-							<AlertDialogDescription>
-								This records your decision against {event.event_id}. The review endpoint is not
-								built yet — nothing is written until it lands.
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction disabled>Deny (coming soon)</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
-				{#if confirming}
-					<p class="text-xs text-muted-foreground">{confirming}</p>
+			{@const isBusy = busy === event.event_id}
+			<div class="flex flex-col gap-2">
+				<div class="flex gap-2">
+					<Button size="sm" disabled={isBusy} onclick={() => onResolve(event.event_id, 'approve')}>
+						{isBusy ? 'Working…' : 'Approve'}
+					</Button>
+					<Button
+						size="sm"
+						variant="outline"
+						disabled={isBusy}
+						onclick={() => {
+							editing = !editing;
+						}}
+					>
+						Edit label
+					</Button>
+					<AlertDialog>
+						<Button size="sm" variant="destructive" disabled={isBusy}>Deny</Button>
+						<AlertDialogContent>
+							<AlertDialogHeader>
+								<AlertDialogTitle>Deny this case?</AlertDialogTitle>
+								<AlertDialogDescription>
+									This records your deny decision against {event.event_id} as a labeled example.
+								</AlertDialogDescription>
+							</AlertDialogHeader>
+							<AlertDialogFooter>
+								<AlertDialogCancel>Cancel</AlertDialogCancel>
+								<AlertDialogAction onclick={() => onResolve(event.event_id, 'deny')}>
+									Deny and record
+								</AlertDialogAction>
+							</AlertDialogFooter>
+						</AlertDialogContent>
+					</AlertDialog>
+				</div>
+				{#if editing}
+					<form
+						class="flex gap-2"
+						onsubmit={(e) => {
+							e.preventDefault();
+							onResolve(event.event_id, 'edit', label);
+						}}
+					>
+						<input
+							class="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm"
+							placeholder="Corrected label + short reason"
+							bind:value={label}
+							disabled={isBusy}
+							aria-label="Corrected label"
+						/>
+						<Button size="sm" type="submit" disabled={isBusy || label.trim().length === 0}>
+							Save
+						</Button>
+					</form>
+				{/if}
+				{#if notice}
+					<p class="text-xs text-muted-foreground" role="status">{notice}</p>
 				{/if}
 			</div>
 		{/if}
