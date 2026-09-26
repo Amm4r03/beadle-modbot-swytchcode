@@ -44,3 +44,6 @@ venv/
 
 # --- misc ---
 .DS_Store
+
+# local man-page cache from himalaya manual lookups (regenerable)
+template/
