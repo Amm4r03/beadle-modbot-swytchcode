@@ -6,7 +6,7 @@ import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
-PROMPT_VERSION = "classify-v0.6"
+PROMPT_VERSION = "classify-v0.7"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 KNOWLEDGE_PROMPT_VERSION = "knowledge-v0.2"
@@ -53,6 +53,10 @@ def classify_questions() -> dict:
             "type": "noul",
             "instructions": "Does the message express intent or willingness to harm, attack, delete, destroy, or shut down the community, its members, or their accounts - regardless of tone, slang, or whether it sounds like a joke? A member reporting or warning about someone else's threat is not a threat.",
         },
+        "harassment_or_abuse": {
+            "type": "noul",
+            "instructions": "Does the message harass, insult, demean, or attack a person or group - including slurs, targeted insults, profanity aimed at someone, or degrading language? Criticism of ideas or civil disagreement is not abuse.",
+        },
     }
 
 
@@ -77,7 +81,7 @@ def run_classify(event_text: str) -> dict:
         result.update(
             result_status="timeout" if isinstance(error, httpx.TimeoutException) else "error",
             degraded=True,
-            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None},
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None, "harassment_or_abuse": None},
             error=f"{type(error).__name__}: {str(error)[:120]}",
         )
         return result
@@ -88,6 +92,7 @@ def run_classify(event_text: str) -> dict:
             "question_shape": float(answers["question_shape"]["noul"]),
             "needs_human_review": float(answers["needs_human_review"]["noul"]),
             "threat_or_harm": float(answers["threat_or_harm"]["noul"]),
+            "harassment_or_abuse": float(answers["harassment_or_abuse"]["noul"]),
         }
         result["model_id"] = raw.get("model", MODEL)
         result["usage"] = raw.get("usage", {})
@@ -95,7 +100,7 @@ def run_classify(event_text: str) -> dict:
         result.update(
             result_status="parse_error",
             degraded=True,
-            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None},
+            scores={"solicitation": None, "question_shape": None, "needs_human_review": None, "threat_or_harm": None, "harassment_or_abuse": None},
             error="missing or malformed noul value",
         )
     return result
@@ -133,9 +138,10 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     question_p = scores.get("question_shape")
     review_p = scores.get("needs_human_review")
     threat_p = scores.get("threat_or_harm")
+    abuse_p = scores.get("harassment_or_abuse")
     knowledge = knowledge or {}
     knowledge_ok = (knowledge.get("answerable_p") or 0) >= 0.70 and (knowledge.get("internal_p") or 0) >= 0.50
-    if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None or threat_p is None:
+    if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None or threat_p is None or abuse_p is None:
         return {
             "verdict": "review",
             "band": "DRAFT",
@@ -147,6 +153,9 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     if threat_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: threat/harm probability {threat_p:.2f} at/above 0.70 - quarantine for review"
+    elif abuse_p >= 0.70:
+        verdict, band = "quarantine", "DRAFT"
+        reason = f"gate: harassment/abuse probability {abuse_p:.2f} at/above 0.70 - quarantine for review"
     elif scam_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: solicitation probability {scam_p:.2f} at/above 0.70 - quarantine for review"
@@ -166,7 +175,7 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     return {
         "verdict": verdict,
         "band": band,
-        "confidence": max(scam_p, question_p, review_p, threat_p),
+        "confidence": max(scam_p, question_p, review_p, threat_p, abuse_p),
         "reason": reason,
         "scores": scores,
         "model_id": jev_result.get("model_id"),

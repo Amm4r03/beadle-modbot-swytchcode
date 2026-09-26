@@ -68,7 +68,7 @@ def main() -> None:
                     )
                     print("   replied: no grounded answer - passed to moderator")
                 elif band == "DRAFT":
-                    if "threat" in decision.get("reason", ""):
+                    if "threat" in decision.get("reason", "") or "harassment" in decision.get("reason", ""):
                         try:
                             bot.delete_message(event["channel_id"], reply_to)
                             print("   deleted the harmful message")
