@@ -104,12 +104,20 @@ requirements.txt
 
 ## Getting started
 
+Quickstart (one block):
+
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # fill in the keys you have
-python3 -m app.main         # runs the fixture smoke test end-to-end
+cp .env.example .env            # fill JEV_API_KEY, GROQ_API_KEY, bot/API keys
+python3 -c "from app import db; db.init_state_db()"
+scripts/knowledge seed          # seed the custom knowledge base
+python3 -m app.main             # fixture smoke test (live Jev scores)
+python3 -m uvicorn api.server:app --port 8788   # API + /test + /live views
+pnpm --dir console install && pnpm --dir console run dev   # admin console
 ```
+
+Step by step:
 
 The smoke test pushes two staged messages (a genuine question and a polished scam) through the full state machine and prints the verdict, band, confidence, reason, and transition trail. With a live Jev key you get real scores; without one, the gate fails closed to human review by design.
 
