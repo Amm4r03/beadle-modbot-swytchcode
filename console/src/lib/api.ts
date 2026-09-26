@@ -69,6 +69,7 @@ export interface Trace {
 	decisions: Decision[];
 	actions: ActionIntent[];
 	overrides: Override[];
+	drafts: { detail_json: string; created_at: string }[];
 }
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
@@ -126,6 +127,7 @@ export interface Metrics {
 	};
 	transitions: { to_state: string; n: number }[];
 	bands: { band: string; n: number }[];
+	knowledge?: { docs: number; retrievals: number; drafts_attempted: number; drafts_cited: number };
 }
 
 export const fetchMetrics = (signal?: AbortSignal) => get<Metrics>('/api/metrics', signal);
@@ -164,4 +166,47 @@ export function latestSignals(signals: SignalRun[]): SignalRun[] {
 		if (!cur || s.signal_version > cur.signal_version) byName[name] = s;
 	}
 	return Object.values(byName).sort((a, b) => a.signal_version.localeCompare(b.signal_version));
+}
+export interface AnnounceResult {
+	ok: boolean;
+	results: Record<string, string>;
+}
+
+export async function postAnnounce(
+	text: string,
+	platforms: string[],
+	signal?: AbortSignal
+): Promise<AnnounceResult> {
+	const res = await fetch(`${API_BASE}/api/announce`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ text, platforms }),
+		signal
+	});
+	if (!res.ok) throw new Error(`API ${res.status} on announce`);
+	return (await res.json()) as AnnounceResult;
+}
+
+export interface KnowledgeDoc {
+	doc_id: string;
+	title: string;
+	added_at: string;
+}
+
+export const fetchKnowledge = (signal?: AbortSignal) =>
+	get<KnowledgeDoc[]>('/api/knowledge', signal);
+
+export async function addKnowledge(
+	title: string,
+	text: string,
+	signal?: AbortSignal
+): Promise<{ ok: boolean; doc_id: string; docs: number }> {
+	const res = await fetch(`${API_BASE}/api/knowledge`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ title, text }),
+		signal
+	});
+	if (!res.ok) throw new Error(`API ${res.status} on knowledge add`);
+	return (await res.json()) as { ok: boolean; doc_id: string; docs: number };
 }
