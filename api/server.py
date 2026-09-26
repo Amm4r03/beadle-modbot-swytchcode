@@ -114,6 +114,10 @@ def trace(event_id: str):
             "SELECT verdict, reason_code, resulting_action, created_at FROM overrides WHERE event_id = ? ORDER BY id",
             (event_id,),
         ),
+        "drafts": rows(
+            "SELECT detail_json, created_at FROM audit WHERE action = 'draft_answer' AND json_extract(detail_json, '$.event_id') = ? ORDER BY id DESC",
+            (event_id,),
+        ),
     }
 
 
@@ -201,6 +205,11 @@ def usage():
                   SUM(output_tokens) AS output_tokens, MAX(recorded_at) AS last_call
            FROM token_usage GROUP BY provider, model, workflow ORDER BY last_call DESC"""
     )
+
+
+@app.get("/test")
+def test_view():
+    return FileResponse(ROOT / "api" / "test.html")
 
 
 @app.get("/live")
