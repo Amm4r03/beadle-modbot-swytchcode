@@ -38,6 +38,29 @@ The demo moment: a genuine question gets a confident answer while a polished sca
 | resolve | Outbox action intent → Swytchcode execution | `action_intents` |
 | learn | Admin override → labeled example; replayable | `overrides`, `event_transitions` |
 
+```mermaid
+flowchart LR
+    TG[Telegram] --> O
+    DC[Discord] --> O
+    O[observe] --> C[classify: 8 deterministic signals + 1 batched Jev call]
+    C --> G{gate: pure reducer}
+    G -->|AUTO| R[resolve: outbox]
+    G -->|DRAFT| E[escalate: quarantine card]
+    G -->|DENY| L[learn]
+    E --> R
+    R --> L
+    R --> SWY[Swytchcode exec]
+    SWY --> DCO[Discord / Slack post]
+    SWY --> NO[Notion ledger + queue]
+    SWY --> RE[Resend digest]
+    O -.-> DB[(state.db ledger)]
+    C -.-> DB
+    G -.-> DB
+    L -.-> DB
+    DB --> API[read API :8788 + SSE]
+    API --> UI[Svelte console]
+```
+
 **State discipline:** LangGraph owns the event-scoped state; SQLite (`data/state.db`) is the durable ledger; `data/checkpoints.db` holds compact checkpoints (disposable, rebuildable). The thread id is `tenant:platform:event_id` — never one thread per community. Model calls never execute writes: every external action goes through the outbox.
 
 ### The gate
