@@ -166,7 +166,7 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     return {
         "verdict": verdict,
         "band": band,
-        "confidence": max(scam_p, question_p, review_p),
+        "confidence": max(scam_p, question_p, review_p, threat_p),
         "reason": reason,
         "scores": scores,
         "model_id": jev_result.get("model_id"),
