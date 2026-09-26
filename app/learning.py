@@ -19,10 +19,14 @@ def recall_examples(community_id: str, text: str, k: int = 3) -> list[dict]:
     if not terms:
         return []
     scored: list[tuple[int, dict]] = []
+    seen: set[str] = set()
     for row in rows:
+        if row["event_id"] in seen:
+            continue
         event_terms = set(re.findall(r"[a-z0-9]+", (row["event_text"] or "").lower()))
         overlap = len(terms & event_terms)
         if overlap >= 2:
             scored.append((overlap, dict(row)))
+            seen.add(row["event_id"])
     scored.sort(key=lambda item: -item[0])
     return [row for _, row in scored[:k]]
