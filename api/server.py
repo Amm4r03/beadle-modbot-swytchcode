@@ -197,7 +197,14 @@ def metrics():
     bands = rows("SELECT band, COUNT(*) AS n FROM decisions GROUP BY band")
     actions = rows("SELECT status, COUNT(*) AS n FROM action_intents GROUP BY status")
     transitions = rows("SELECT to_state, COUNT(*) AS n FROM event_transitions GROUP BY to_state ORDER BY n DESC")
-    return {"totals": totals, "bands": bands, "actions": actions, "transitions": transitions}
+    knowledge = rows(
+        """SELECT
+        (SELECT COUNT(*) FROM knowledge_docs) AS docs,
+        (SELECT COUNT(*) FROM signal_runs WHERE signal_version LIKE 'knowledge_answer%') AS retrievals,
+        (SELECT COUNT(*) FROM audit WHERE action = 'draft_answer') AS drafts_attempted,
+        (SELECT COUNT(*) FROM audit WHERE action = 'draft_answer' AND json_array_length(json_extract(detail_json, '$.source_ids')) > 0) AS drafts_cited"""
+    )[0]
+    return {"totals": totals, "bands": bands, "actions": actions, "transitions": transitions, "knowledge": knowledge}
 
 
 @app.get("/api/usage")
