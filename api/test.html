@@ -87,26 +87,35 @@ async function load() {
   const jev = trace.signals.filter((s) => s.signal_version.includes("jev"));
   const draft = trace.drafts && trace.drafts[0] ? JSON.parse(trace.drafts[0].detail_json) : null;
 
-  document.getElementById("journey").innerHTML = trace.transitions.map((t) => {
-    const [name, what] = STAGE[t.to_state] || [t.to_state, t.reason_code || ""];
-    let detail = "";
-    if (t.to_state === "signals_ready") {
-      detail = `<div class="chips">` + signals.map((s) => {
-        let val = ""; try { val = JSON.parse(s.result_json).value; } catch {}
-        return `<span class="chip ${val === "TRUE" || val === true ? "hot" : ""}">${esc(s.signal_version.split("@")[0])}: ${esc(val)}</span>`;
-      }).join("") + jev.map((s) => {
-        let v2 = ""; try { v2 = JSON.parse(s.result_json).value; } catch {}
-        return `<span class="chip hot">${esc(s.signal_version.split("@")[0])}: ${v2 != null ? Number(v2).toFixed(2) : "?"}</span>`;
-      }).join("") + `</div>`;
-    } else if (t.to_state === "decided") {
-      detail = `<div class="detail">${esc(t.reason_code)} — ${esc(decision.reason || "")}</div>`;
-    } else if (t.to_state === "drafted" && draft) {
-      detail = `<div class="detail">${esc(draft.text || "(escalated — no grounded draft)")}\n<span class="cite">sources: ${esc((draft.source_ids || []).join(", ") || "none")}</span></div>`;
-    } else if (t.reason_code) {
-      detail = `<div class="detail">${esc(t.reason_code)}</div>`;
-    }
-    return `<div class="step on"><div class="card"><h3>${esc(name)}</h3><div class="what">${esc(what)}</div>${detail}</div></div>`;
-  }).join("") + `<div class="step"><div class="card"><h3>learn</h3><div class="what">${trace.overrides.length ? "admin resolved this case — stored as a labeled example" : "awaiting human verdict"}</div></div></div>`;
+	const seen = new Set();
+	const steps = [];
+	for (const t of trace.transitions) {
+		if (seen.has(t.to_state)) continue;
+		seen.add(t.to_state);
+		const [name, what] = STAGE[t.to_state] || [t.to_state, t.reason_code || ''];
+		let detail = '';
+		if (t.to_state === 'signals_ready') {
+			detail = `<div class="chips">` + signals.map((s) => {
+				let val = ''; try { val = JSON.parse(s.result_json).value; } catch {}
+				return `<span class="chip ${val === 'TRUE' || val === true ? 'hot' : ''}">${esc(s.signal_version.split('@')[0])}: ${esc(val)}</span>`;
+			}).join('') + jev.map((s) => {
+				let v2 = ''; try { v2 = JSON.parse(s.result_json).value; } catch {}
+				return `<span class="chip hot">${esc(s.signal_version.split('@')[0])}: ${v2 != null ? Number(v2).toFixed(2) : '?'}</span>`;
+			}).join('') + `</div>`;
+		} else if (t.to_state === 'decided') {
+			detail = `<div class="detail">${esc(t.reason_code)} — ${esc(decision.reason || '')}</div>`;
+		} else if (t.to_state === 'drafted' && draft) {
+			detail = `<div class="detail">${esc(draft.text || '(escalated — no grounded draft)')}\n<span class="cite">sources: ${esc((draft.source_ids || []).join(', ') || 'none')}</span></div>`;
+		} else if (t.reason_code) {
+			detail = `<div class="detail">${esc(t.reason_code)}</div>`;
+		}
+		steps.push(`<div class="step on"><div class="card"><h3>${esc(name)}</h3><div class="what">${esc(what)}</div>${detail}</div></div>`);
+	}
+	const learned = trace.overrides.length > 0;
+	if (!seen.has('recorded') && !seen.has('learning_candidate')) {
+		steps.push(`<div class="step"><div class="card"><h3>learn</h3><div class="what">${learned ? 'admin resolved this case — stored as a labeled example' : 'awaiting human verdict'}</div></div></div>`);
+	}
+	document.getElementById('journey').innerHTML = steps.join('');
 }
 
 document.getElementById("chat").addEventListener("submit", async (e) => {
