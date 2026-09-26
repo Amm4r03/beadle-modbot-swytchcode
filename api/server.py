@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = ROOT / "data" / "state.db"
@@ -111,6 +112,46 @@ def trace(event_id: str):
             (event_id,),
         ),
     }
+
+
+class ResolveRequest(BaseModel):
+    verdict: str
+    reason_code: str | None = None
+    admin_user_id: str = "admin-demo"
+    resulting_action: str | None = None
+
+
+@app.post("/api/quarantine/{event_id}/resolve")
+def resolve_quarantine(event_id: str, request: ResolveRequest):
+    con = sqlite3.connect(DB_PATH, timeout=5)
+    con.execute("PRAGMA busy_timeout=5000")
+    con.row_factory = sqlite3.Row
+    try:
+        community = con.execute(
+            "SELECT community_id FROM inbox_events WHERE id = ?", (event_id,)
+        ).fetchone()
+        con.execute(
+            "INSERT INTO overrides (event_id, admin_user_id, verdict, reason_code, message_class, resulting_action, created_at) VALUES (?,?,?,?,?,?,datetime('now'))",
+            (event_id, request.admin_user_id, request.verdict, request.reason_code, "quarantine_resolution", request.resulting_action),
+        )
+        override_id = con.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+        updated = con.execute(
+            "UPDATE action_intents SET status = 'resolved', updated_at = datetime('now') WHERE event_id = ? AND action_type = 'mod_queue_card'",
+            (event_id,),
+        ).rowcount
+        con.execute(
+            "INSERT INTO audit (community_id, actor, action, detail_json, created_at) VALUES (?,?,?,?,datetime('now'))",
+            (
+                community["community_id"] if community else None,
+                request.admin_user_id,
+                "quarantine_resolved",
+                json.dumps({"event_id": event_id, "verdict": request.verdict, "reason_code": request.reason_code, "resulting_action": request.resulting_action}),
+            ),
+        )
+        con.commit()
+        return {"ok": True, "event_id": event_id, "override_id": override_id, "cards_updated": updated}
+    finally:
+        con.close()
 
 
 @app.get("/api/stream")
