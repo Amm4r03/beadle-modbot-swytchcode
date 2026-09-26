@@ -9,18 +9,22 @@
 	import Platforms from '$lib/Platforms.svelte';
 	import Alerts from '$lib/Alerts.svelte';
 	import {
-		DEFAULT_COMMUNITY,
 		STREAM_URL,
+		fetchCommunities,
 		fetchCounts,
 		fetchEvents,
 		fetchMetrics,
 		fetchTrace,
 		resolveCase,
+		type Community,
 		type Counts,
 		type EventRow,
 		type Metrics,
 		type Trace
 	} from '$lib/api';
+
+	let community: string | null = $state(null);
+	let communities = $state<Community[]>([]);
 
 	const SECTIONS = [
 		{ id: 'overview', label: 'Live counts' },
@@ -73,14 +77,17 @@
 
 	async function refresh(signal?: AbortSignal) {
 		try {
-			const [c, ev, m] = await Promise.all([
-				fetchCounts(DEFAULT_COMMUNITY, signal),
-				fetchEvents(DEFAULT_COMMUNITY, 20, signal),
-				fetchMetrics(signal)
+			const scope = community ?? communities[0]?.community_id ?? null;
+			const [c, ev, m, comms] = await Promise.all([
+				scope ? fetchCounts(scope, signal) : Promise.resolve(null),
+				fetchEvents(scope, 20, signal),
+				fetchMetrics(signal),
+				fetchCommunities(signal)
 			]);
 			counts = c;
 			metrics = m;
 			events = ev;
+			communities = comms;
 			lastSync = Date.now();
 			syncTick += 1;
 			stale = false;
@@ -125,15 +132,28 @@
 </script>
 
 <svelte:head>
-	<title>Beadle admin · {DEFAULT_COMMUNITY}</title>
+	<title>Beadle admin · {community ?? 'all communities'}</title>
 </svelte:head>
 
 <Sidebar.Provider>
 	<Sidebar.Root variant="inset">
 		<Sidebar.Header>
-			<div class="px-2 py-1">
+			<div class="flex flex-col gap-1 px-2 py-1">
 				<p class="text-sm font-semibold">Beadle admin</p>
-				<p class="text-xs text-muted-foreground tabular-nums">{DEFAULT_COMMUNITY}</p>
+				<label class="text-xs text-muted-foreground" for="community-select">Community</label>
+				<select
+					id="community-select"
+					class="rounded-md border border-input bg-background px-2 py-1 text-xs"
+					bind:value={community}
+					onchange={() => void refresh()}
+				>
+					<option value={null}>All communities</option>
+					{#each communities as c (c.community_id)}
+						<option value={c.community_id}>
+							{c.community_id} ({c.events})
+						</option>
+					{/each}
+				</select>
 			</div>
 		</Sidebar.Header>
 		<Sidebar.Content>
@@ -219,13 +239,22 @@
 			{/if}
 
 			<div id="admin-new-overview" class="flex scroll-mt-4 flex-col gap-2">
-				<h2 class="text-base font-semibold">Live counts</h2>
+				<h2 class="text-base font-semibold">
+					Live counts{#if community}
+						· {community}{/if}
+				</h2>
+				{#if community === null && communities.length > 0}
+					<p class="text-sm text-muted-foreground tabular-nums">
+						All communities: {communities.reduce((a, c) => a + c.events, 0)} events across {communities.length}
+						communities — pick one above for scoped counts.
+					</p>
+				{/if}
 				<CountsRow {counts} />
 			</div>
 
 			<div id="admin-new-events" class="flex scroll-mt-4 flex-col gap-2">
 				<h2 class="text-base font-semibold">Recent events</h2>
-				<EventsList {events} {now} />
+				<EventsList {events} {now} showCommunity={community === null} />
 			</div>
 
 			<div id="admin-new-queue" class="flex scroll-mt-4 flex-col gap-4">
