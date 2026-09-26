@@ -91,10 +91,31 @@ def create_notion_page(parent_page_id: str, title: str, text: str, dry_run: bool
 
 
 def send_digest(to_email: str, subject: str, text: str, html: str | None = None, dry_run: bool = False) -> dict:
+    allowed = os.environ.get("DIGEST_TO", "")
+    if to_email != allowed:
+        raise SwytchcodeError(f"recipient {to_email!r} is not the configured admin address - member-triggered email is blocked")
     body = {"from": os.environ.get("RESEND_FROM", "Beadle <onboarding@resend.dev>"), "to": [to_email], "subject": subject, "text": text}
     if html:
         body["html"] = html
     return exec_action("resend.email.create", body=body, dry_run=dry_run)
+
+
+def write_ledger(event_id: str, text: str, band: str, verdict: str, confidence: float, reason: str) -> dict:
+    parent = os.environ.get("NOTION_PARENT_PAGE_ID", "")
+    title = f"Ledger - {event_id} ({band}:{verdict})"
+    body = f"Event: {event_id}\nDecision: {band}:{verdict} - confidence {confidence:.2f}\nMessage: {text[:200]}\nReason: {reason}"
+    return create_notion_page(parent, title, body)
+
+
+def notify_admin(event_id: str, text: str, band: str, verdict: str, confidence: float, reason: str) -> dict:
+    to = os.environ.get("DIGEST_TO", "")
+    subject = f"Beadle escalation - {event_id} ({band}:{verdict})"
+    body = (
+        f"Escalation from the gate engine (admin notification only - members cannot trigger email).\n"
+        f"Event: {event_id}\nDecision: {band}:{verdict} (confidence {confidence:.2f})\n"
+        f"Message: {text[:200]}\nReason: {reason}\nConsole: http://localhost:5173/admin"
+    )
+    return send_digest(to, subject, body)
 
 
 def _attempt(name: str, fn) -> dict:

@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app import db
+from app import db, swytchcode
 from app.graph import build_graph
 from app.telegram_direct import TelegramDirect
 
@@ -56,6 +56,15 @@ def main() -> None:
             draft = final.get("draft") or {}
             band = decision.get("band")
             print(f"{event['event_id']} -> {band}:{decision.get('verdict')} conf={decision.get('confidence')} :: {event['text'][:60]}")
+            try:
+                swytchcode.write_ledger(event["event_id"], event["text"], band or "?", decision.get("verdict") or "?", float(decision.get("confidence") or 0.0), decision.get("reason", ""))
+                if band == "DRAFT":
+                    swytchcode.notify_admin(event["event_id"], event["text"], band, decision.get("verdict") or "?", float(decision.get("confidence") or 0.0), decision.get("reason", ""))
+                    print("   ledger row written + admin notified")
+                else:
+                    print("   ledger row written")
+            except Exception as error:
+                print(f"   execution wiring failed: {error}")
             try:
                 if band == "AUTO" and draft.get("text"):
                     bot.send_message(event["channel_id"], draft["text"], reply_to_message_id=reply_to)
