@@ -107,7 +107,7 @@ def trace(event_id: str):
             (event_id,),
         ),
         "decisions": rows(
-            "SELECT verdict, band, confidence, reason, prompt_version, prompt_hash, model_id, result_status, decided_at FROM decisions WHERE event_id = ? ORDER BY id DESC",
+            "SELECT verdict, band, confidence, reason, prompt_version, prompt_hash, model_id, result_status, context_refs_json, decided_at FROM decisions WHERE event_id = ? ORDER BY id DESC",
             (event_id,),
         ),
         "actions": rows(

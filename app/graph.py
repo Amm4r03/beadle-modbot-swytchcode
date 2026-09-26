@@ -5,7 +5,7 @@ import sqlite3
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, START, StateGraph
 
-from app import db, generate, jev, memory, signals
+from app import db, generate, jev, learning, memory, signals
 from app.state import AgentState, now, transition
 
 GATE_VERSION = "gate-v0.1"
@@ -149,6 +149,10 @@ def gate(state: AgentState) -> AgentState:
     knowledge = state.get("knowledge", {})
     if knowledge.get("answerable_p") is not None:
         decision["reason"] += f" · knowledge answerable {knowledge['answerable_p']:.2f} ({','.join(knowledge.get('passages', []))})"
+    examples = learning.recall_examples(event.get("community_id", ""), event.get("text", ""))
+    if examples:
+        decision["retrieved_ids"] = list(decision["retrieved_ids"]) + [row["event_id"] for row in examples]
+        decision["reason"] += f" · taught_by {','.join(row['event_id'] for row in examples)}"
     con = db.connect()
     con.execute(
         "INSERT INTO decisions (event_id, policy_version, gate_version, model_id, prompt_version, verdict, band, confidence, reason, context_refs_json, prompt_hash, norm_version, example_snapshot_id, result_status, decided_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))",
