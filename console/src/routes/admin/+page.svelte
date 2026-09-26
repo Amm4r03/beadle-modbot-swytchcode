@@ -6,6 +6,8 @@
 	import ExecLog from '$lib/ExecLog.svelte';
 	import StageFlow from '$lib/StageFlow.svelte';
 	import TryGate from '$lib/TryGate.svelte';
+	import Announce from '$lib/Announce.svelte';
+	import Knowledge from '$lib/Knowledge.svelte';
 	import {
 		DEFAULT_COMMUNITY,
 		STREAM_URL,
@@ -29,6 +31,7 @@
 	let lastSync = $state<number | null>(null);
 	let busy = $state<string | null>(null);
 	let notice = $state<string | null>(null);
+	let syncTick = $state(0);
 
 	async function handleResolve(eventId: string, verdict: 'approve' | 'deny' | 'edit', label = '') {
 		busy = eventId;
@@ -64,6 +67,7 @@
 			metrics = m;
 			events = ev;
 			lastSync = Date.now();
+			syncTick += 1;
 			stale = false;
 			error = null;
 			for (const e of ev.slice(0, 8)) {
@@ -141,6 +145,8 @@
 	<StageFlow {metrics} />
 	<EventsList {events} {now} />
 	<ExecLog events={events ?? []} {traces} {now} />
+	<Announce />
+	<Knowledge {metrics} refreshKey={syncTick} />
 	<section id="queue" aria-label="Quarantine queue" class="flex flex-col gap-4">
 		<h2 class="text-base font-semibold tabular-nums">
 			Quarantine ({quarantined.length})
