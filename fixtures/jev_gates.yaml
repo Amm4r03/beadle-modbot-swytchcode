@@ -1,42 +1,44 @@
 # Jev Gate Config — Calibrated Community Operator
+#
+# Question set (locked 2026-09-26, Phase 1): solicitation · question_shape · needs_human_review.
+# Dropped: answerable_from_source (Jev can't see the FAQ; answerability = retrieval/resolver).
+# Model pinned per build; log `model` + question version + policy version per decision.
 
-# Source: per-action thresholds from `docs/research-deepseek-searches.md` §(d) (learnjev/Vercel/Hakky/Bloss0m).
-# Jev = decision layer only (no text, no tools). Swytchcode policy = tool broker (confidence ≠ authorization).
-# Pin model version (`jev-latest` is an alias); log `model` + question version + policy version per decision (the trace is the wow).
+model: "jev-1.13.0"
+question_version: "gate-v1"
+batching: "one batched classify call for solicitation + question_shape + needs_human_review (gate latency)"
 
-model: "jev-pinned-2026-09-25 # TODO: replace with exact version string at build"
-batching: "independent questions batched in one call (gate latency)"
+# Bands (set from measured Phase 1 scores 2026-09-26):
+# genuine: question_shape 0.94, solicitation 0.01, review 0.29 → AUTO:answer
+# scam: solicitation 0.96, question 0.03, review 0.72 → DRAFT:quarantine
+# R1 probe: solicitation 0.95 → generalizes
 
-# Noul (yes/no) has NO confidence field — threshold the yes-probability directly,
-# with separate yes/no cutoffs + an uncertain band routed to draft/review.
+reducer:
+  quarantine_draft_when: "solicitation >= 0.70"
+  answer_auto_when: "question_shape >= 0.85 AND solicitation <= 0.10 AND needs_human_review < 0.50"
+  review_draft_when: "middle band (neither auto nor deny)"
+  deny_when: "no_action class (none of the above fire)"
 
 gates:
   - action: "public_answer"
-    question: "is this message safe + answerable from the lorebook?"
+    questions: ["question_shape", "solicitation", "needs_human_review"]
     type: "noul"
-    auto_yes_at: 0.85
-    uncertain_band: [0.60, 0.85]
-    uncertain_route: "draft reply for mod approval, never auto-send"
-    deny_below: 0.60
-    deny_route: "escalate-with-context card to #mod-queue"
+    route: "AUTO only when answer_auto_when holds; else DRAFT (draft reply for mod approval, never auto-send) or DENY (escalate-with-context card)"
 
   - action: "scam_quarantine"
-    question: "is this message an impersonation/scam pattern?"
+    questions: ["solicitation", "needs_human_review"]
     type: "noul"
-    auto_block_at: 0.70
-    # scam gate is deliberately LOWER than answer gate: false quarantine is
-    # reversible (mod un-bans), false answer to a scam is not.
-    block_route: "quarantine sender + pre-approved member warning + audit line + #mod-queue card"
-    note: "pre-approved warning template may post without further approval"
+    route: "DRAFT quarantine (sender held + pre-approved member warning + audit line + #mod-queue card) when solicitation >= 0.70; never auto-ban"
+    note: "scam gate deliberately LOWER than answer gate: false quarantine is reversible (mod un-bans), false answer to a scam is not"
 
   - action: "member_nudge"
-    question: "is this lurker ready for one relevant nudge?"
+    questions: ["question_shape"]
     type: "score"
     auto_at: 0.80
     below_route: "leave silent; re-score next week"
 
   - action: "weekly_digest_send"
-    question: "is the compiled report faithful to the underlying events?"
+    questions: ["needs_human_review"]
     type: "noul"
     auto_yes_at: 0.90
     uncertain_route: "mod reviews digest draft before Resend send"
@@ -45,5 +47,5 @@ gates:
     list: ["payments", "deletions", "permission changes", "external-attendee contact"]
     route: "human approval always, regardless of confidence"
 
-two_layer_rule: "Jev high-confidence STILL passes Swytchcode policy (tooling.json) before any exec — policy version logged per action."
-demo_overrides: "none — demo runs the same thresholds against fixtures; MSG-A (0.88) clears auto-answer, MSG-B (0.93 scam) clears auto-block."
+two_layer_rule: "Jev verdict STILL passes Swytchcode policy (tooling.json) before any exec — policy version logged per action."
+fail_closed: "Jev unavailable or malformed output → DRAFT, never AUTO."
