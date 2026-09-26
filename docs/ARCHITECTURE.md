@@ -25,7 +25,7 @@ flowchart LR
     L -.-> DB
     DB --> API[read API :8788 + SSE]
     API --> UI[Svelte admin console]
-    API --> TEST[/test agent journey view]
+    API --> TEST["/test agent journey view"]
 ```
 
 Planes:
