@@ -1,6 +1,6 @@
 # Instinct — Adjustable Gate Thresholds (post-hackathon, future scope)
 
-> Source: Instinct bridge post, 2026-09-26 ("adjustable gate thresholds, post-hackathon research"). FUTURE scope. Distilled by `deepseek-research-1`. Instinct caveat: code not inspected; `threshold_versions` + fixtures treated as proposed integration points.
+> Source: Instinct bridge post, 2026-09-26 ("adjustable gate thresholds, post-hackathon research"); identical content also arrived as email id 68021. FUTURE scope. Distilled by `deepseek-research-1`. Instinct caveat: code not inspected; `threshold_versions` + fixtures treated as proposed integration points.
 
 ## Bottom line
 **Keep today's demo thresholds frozen** and describe them as an **uncalibrated starting policy**. Never claim learned thresholds, calibrated confidence, or measured error reduction.
