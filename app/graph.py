@@ -16,6 +16,19 @@ def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
+def record(state: AgentState, to_state: str, reason_code: str = "") -> None:
+    transitions = state.get("transitions") or []
+    previous = transitions[-1]["to_state"] if transitions else None
+    transition(state, to_state, reason_code)
+    con = db.connect()
+    con.execute(
+        "INSERT INTO event_transitions (event_id, from_state, to_state, occurred_at, reason_code) VALUES (?,?,?,?,?)",
+        (state["event"]["event_id"], previous, to_state, now(), reason_code),
+    )
+    con.commit()
+    con.close()
+
+
 def observe(state: AgentState) -> AgentState:
     event = state["event"]
     con = db.connect()
@@ -29,7 +42,7 @@ def observe(state: AgentState) -> AgentState:
     )
     con.commit()
     con.close()
-    transition(state, "received", "ingested")
+    record(state, "received", "ingested")
     return state
 
 
@@ -66,7 +79,7 @@ def classify(state: AgentState) -> AgentState:
     state["signals"] = results
     state["jev"] = jev_result
     names = [r["id"] for r in results] + [f"jev:{name}" for name in (jev_result.get("scores") or {}).keys()]
-    transition(state, "signals_ready", ",".join(names))
+    record(state, "signals_ready", ",".join(names))
     return state
 
 
@@ -114,7 +127,7 @@ def gate(state: AgentState) -> AgentState:
     con.commit()
     con.close()
     state["decision"] = decision
-    transition(state, "decided", f"{decision['band']}:{decision['verdict']}")
+    record(state, "decided", f"{decision['band']}:{decision['verdict']}")
     return state
 
 
@@ -139,7 +152,7 @@ def escalate(state: AgentState) -> AgentState:
     con.commit()
     con.close()
     state["action"] = {"type": "mod_queue_card", "intent_id": intent_id, "reason": decision["reason"]}
-    transition(state, "approval_pending", "quarantine card created")
+    record(state, "approval_pending", "quarantine card created")
     return state
 
 
@@ -156,7 +169,7 @@ def resolve(state: AgentState) -> AgentState:
     con.commit()
     con.close()
     state["action"] = {"type": action_type, "intent_id": intent_id, "reason": decision["reason"]}
-    transition(state, "action_pending", action_type)
+    record(state, "action_pending", action_type)
     return state
 
 
@@ -171,9 +184,9 @@ def learn(state: AgentState) -> AgentState:
         )
         con.commit()
         con.close()
-        transition(state, "learning_candidate", "override recorded")
+        record(state, "learning_candidate", "override recorded")
     else:
-        transition(state, "recorded", "awaiting human verdict")
+        record(state, "recorded", "awaiting human verdict")
     return state
 
 
