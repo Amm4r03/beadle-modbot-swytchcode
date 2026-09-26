@@ -8,7 +8,7 @@ never invented from the docs.
 |---|---|---|
 | community-info | what is GDG, GDG Cloud New Delhi, who runs it | `gdg-what-is`, `gdg-cloud-new-delhi` |
 | events | how to join, find events, RSVP, event formats, DevFest | `gdg-how-to-join`, `gdg-events`, `gdg-cloud-new-delhi` |
-| volunteering | volunteer, speak, propose a talk, organize, GDE | `gdg-volunteer-speaking` |
+| volunteering | volunteer, speak, propose a talk, organize, GDE | `gdg-volunteer-speaking`, `gdg-co-organizer` |
 | conduct | code of conduct, community guidelines, reporting | `gdg-code-of-conduct` |
 
 How it works:

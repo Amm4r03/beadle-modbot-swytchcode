@@ -1,7 +1,10 @@
 # Community guidelines and code of conduct basics
 
-Sources: Google Event Community Guidelines and Anti-Harassment Policy (google.com/events/policy/anti-harassmentpolicy.html, CC0-licensed, influenced by Ada Initiative / ConfCodeofConduct / JSConf / Rust / Write-Speak-Code policies).
+## How to report harassment
+
+To report harassment at a GDG event: contact a member of the event staff immediately — staff are usually identifiable by special badges or attire. Staff will help contact venue security or local law enforcement, provide escorts, or otherwise assist. Every allegation is looked into; organizers may warn or expel the offender with no refund. Reporting covers talks, workshops, codelabs, social media, parties, and hallway conversations. If approaching staff in person feels unsafe, ask any volunteer to connect you [INFERENCE: practical advice, not policy text].
+
+Per the policy: contact a member of the event staff immediately — staff are usually identifiable by special badges or attire. Staff will help contact venue security or local law enforcement, provide escorts, or otherwise assist. Every allegation is looked into; organizers may warn or expel the offender with no refund. Reporting covers talks, workshops, codelabs, social media, parties, and hallway conversations — not just the main stage. If approaching staff in person feels unsafe, ask any volunteer to connect you [INFERENCE: practical advice, not policy text].
 
 Google events operate under a published anti-harassment policy: a harassment-free, inclusive experience regardless of gender identity, sexual orientation, disability, neurodiversity, appearance, ethnicity, nationality, race, age, or religion. Core rules: be excellent to each other; speak up if you see harassment; harassment — including verbal abuse tied to protected categories, sexual imagery, intimidation, stalking, sustained disruption, unwelcome sexual attention — is not tolerated and can mean warning or expulsion with no refund. Reporting goes to event staff (identified by badges); staff help with security, escorts, and follow-up, and review every allegation.
 
-For GDG chapters specifically [INFERENCE]: expect the same standards at meetups — respect speakers and newcomers, no sales pitches disguised as talks, keep questions curious rather than combative, and flag problems to organizers rather than litigating them in the room. If you witness something off, talk to an organizer the same day; that is what the policy asks of you.
