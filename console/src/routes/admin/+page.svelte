@@ -66,11 +66,11 @@
 			lastSync = Date.now();
 			stale = false;
 			error = null;
-			for (const e of ev.filter((x) => x.band === 'DRAFT')) {
+			for (const e of ev.slice(0, 8)) {
 				if (!traces[e.event_id]) {
 					fetchTrace(e.event_id, signal)
 						.then((t) => {
-							traces[e.event_id] = t;
+							traces = { ...traces, [e.event_id]: t };
 						})
 						.catch(() => {});
 				}
