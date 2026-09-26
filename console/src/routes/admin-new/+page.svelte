@@ -7,6 +7,7 @@
 	import Announce from '$lib/Announce.svelte';
 	import Knowledge from '$lib/Knowledge.svelte';
 	import Platforms from '$lib/Platforms.svelte';
+	import Alerts from '$lib/Alerts.svelte';
 	import {
 		DEFAULT_COMMUNITY,
 		STREAM_URL,
@@ -25,6 +26,7 @@
 		{ id: 'overview', label: 'Live counts' },
 		{ id: 'events', label: 'Recent events' },
 		{ id: 'queue', label: 'Quarantine queue' },
+		{ id: 'alerts', label: 'Alerts' },
 		{ id: 'announce', label: 'Announcements' },
 		{ id: 'knowledge', label: 'Knowledge' },
 		{ id: 'taught', label: 'Because you taught me' },
@@ -64,7 +66,9 @@
 		}
 	}
 
-	let quarantined = $derived((events ?? []).filter((e) => e.band === 'DRAFT'));
+	let quarantined = $derived(
+		(events ?? []).filter((e) => e.band === 'DRAFT' && e.card_status !== 'resolved')
+	);
 	let taught = $derived((events ?? []).filter((e) => (e.reason ?? '').includes('taught')).length);
 
 	async function refresh(signal?: AbortSignal) {
@@ -243,9 +247,11 @@
 					{/each}
 				{/if}
 			</div>
-
 			<div id="admin-new-announce">
 				<Announce />
+			</div>
+			<div id="admin-new-alerts">
+				<Alerts refreshKey={syncTick} {now} />
 			</div>
 
 			<div id="admin-new-knowledge">

@@ -54,7 +54,9 @@
 		}
 	}
 
-	let quarantined = $derived((events ?? []).filter((e) => e.band === 'DRAFT'));
+	let quarantined = $derived(
+		(events ?? []).filter((e) => e.band === 'DRAFT' && e.card_status !== 'resolved')
+	);
 	let taught = $derived((events ?? []).filter((e) => (e.reason ?? '').includes('taught')).length);
 
 	async function refresh(signal?: AbortSignal) {
