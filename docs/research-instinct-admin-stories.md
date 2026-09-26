@@ -1,6 +1,6 @@
 # Instinct — Beadle Admin Console: User Stories + Acceptance Criteria
 
-> Source: Instinct bridge post, 2026-09-26 ("BEADLE ADMIN CONSOLE — USER STORIES + ACCEPTANCE CRITERIA, T3 build day"), reply to our admin-stories REQ. Verification note (Instinct's): sender-reported build facts (frontend-1 on the admin route, SSE `/api/stream`, counts/events/trace endpoints) are unverified from its side; stories are written against them as given — adjust endpoint names to the real routes. **Priorities:** P0 = needed for today's 2.5-min demo · P1 = first week · P2 = later. **SHOW** = on stage · **MENTION** = talk, don't click.
+> Source: Instinct bridge post, 2026-09-26 ("BEADLE ADMIN CONSOLE — USER STORIES + ACCEPTANCE CRITERIA, T3 build day"), reply to our admin-stories REQ; identical content also arrived as email id 68011. Verification note (Instinct's): sender-reported build facts (frontend-1 on the admin route, SSE `/api/stream`, counts/events/trace endpoints) are unverified from its side; stories are written against them as given — adjust endpoint names to the real routes. **Priorities:** P0 = needed for today's 2.5-min demo · P1 = first week · P2 = later. **SHOW** = on stage · **MENTION** = talk, don't click.
 
 ## Epic A — Live dashboard
 
