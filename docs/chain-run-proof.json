@@ -1,0 +1,150 @@
+{
+  "event_id": "tg-demo-msg-a",
+  "dry_run": false,
+  "steps": [
+    {
+      "step": "notion.page.create",
+      "result": {
+        "data": {
+          "archived": false,
+          "cover": null,
+          "created_by": {
+            "id": "3e781f99-c28c-8166-9431-002721f2c6ea",
+            "object": "user"
+          },
+          "created_time": "2026-09-26T08:50:00.000Z",
+          "icon": null,
+          "id": "3e781f99-c28c-8135-b097-f53607d9bd62",
+          "in_trash": false,
+          "is_archived": false,
+          "is_locked": false,
+          "last_edited_by": {
+            "id": "3e781f99-c28c-8166-9431-002721f2c6ea",
+            "object": "user"
+          },
+          "last_edited_time": "2026-09-26T08:50:00.000Z",
+          "object": "page",
+          "parent": {
+            "page_id": "3e781f99-c28c-8147-9fa0-ff9d50a2b1c5",
+            "type": "page_id"
+          },
+          "properties": {
+            "title": {
+              "id": "title",
+              "title": [
+                {
+                  "annotations": {
+                    "bold": false,
+                    "code": false,
+                    "color": "default",
+                    "italic": false,
+                    "strikethrough": false,
+                    "underline": false
+                  },
+                  "href": null,
+                  "plain_text": "Beadle report - tg-demo-msg-a",
+                  "text": {
+                    "content": "Beadle report - tg-demo-msg-a",
+                    "link": null
+                  },
+                  "type": "text"
+                }
+              ],
+              "type": "title"
+            }
+          },
+          "public_url": null,
+          "request_id": "e8801678-8ee3-41a3-8385-bc4d1e75eb1a",
+          "url": "https://app.notion.com/p/Beadle-report-tg-demo-msg-a-3e781f99c28c8135b097f53607d9bd62"
+        },
+        "request": {
+          "method": "POST",
+          "url": "https://api.notion.com/v1/pages"
+        },
+        "status_code": 200
+      }
+    },
+    {
+      "step": "slack.chat.postmessage.create",
+      "result": {
+        "data": {
+          "channel": "C0C4JHM79AA",
+          "message": {
+            "app_id": "A0BMTJBRJHK",
+            "blocks": [
+              {
+                "block_id": "BeEi",
+                "elements": [
+                  {
+                    "elements": [
+                      {
+                        "text": "Beadle escalation: tg-demo-msg-a (telegram/tg:maplenest) -> AUTO:answer (conf 0.93). Report: ",
+                        "type": "text"
+                      },
+                      {
+                        "type": "link",
+                        "url": "https://app.notion.com/p/Beadle-report-tg-demo-msg-a-3e781f99c28c8135b097f53607d9bd62"
+                      }
+                    ],
+                    "type": "rich_text_section"
+                  }
+                ],
+                "type": "rich_text"
+              }
+            ],
+            "bot_id": "B0C5GTTH0RE",
+            "bot_profile": {
+              "app_id": "A0BMTJBRJHK",
+              "deleted": false,
+              "icons": {
+                "image_36": "https://a.slack-edge.com/80588/img/plugins/app/bot_36.png",
+                "image_48": "https://a.slack-edge.com/80588/img/plugins/app/bot_48.png",
+                "image_72": "https://a.slack-edge.com/80588/img/plugins/app/service_72.png"
+              },
+              "id": "B0C5GTTH0RE",
+              "name": "Swytchcode",
+              "team_id": "T0C4FDGG337",
+              "updated": 1790410269,
+              "user_id": "U0C4HEHNMK7"
+            },
+            "team": "T0C4FDGG337",
+            "text": "Beadle escalation: tg-demo-msg-a (telegram/tg:maplenest) -&gt; AUTO:answer (conf 0.93). Report: <https://app.notion.com/p/Beadle-report-tg-demo-msg-a-3e781f99c28c8135b097f53607d9bd62>",
+            "ts": "1790412619.377569",
+            "type": "message",
+            "user": "U0C4HEHNMK7"
+          },
+          "ok": true,
+          "response_metadata": {
+            "warnings": [
+              "missing_charset"
+            ]
+          },
+          "ts": "1790412619.377569",
+          "warning": "missing_charset"
+        },
+        "request": {
+          "method": "POST",
+          "url": "https://slack.com/api/chat.postMessage"
+        },
+        "status_code": 200
+      }
+    },
+    {
+      "step": "discord.message.create",
+      "error": "exit 3: 2026/09/26 14:20:20 [swytchcode exec] failed tool=discord.message.create exit_code=3 error=authorization failed for Discord (401) - the connection may be revoked; run `swytchcode auth connect Discord`"
+    },
+    {
+      "step": "resend.email.create",
+      "result": {
+        "data": {
+          "id": "01a0dce8-82ca-73ca-a8f9-fffefd124515"
+        },
+        "request": {
+          "method": "POST",
+          "url": "https://api.resend.com/emails"
+        },
+        "status_code": 200
+      }
+    }
+  ]
+}

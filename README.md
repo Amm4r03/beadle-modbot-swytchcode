@@ -113,10 +113,28 @@ python3 -m app.main         # runs the fixture smoke test end-to-end
 
 The smoke test pushes two staged messages (a genuine question and a polished scam) through the full state machine and prints the verdict, band, confidence, reason, and transition trail. With a live Jev key you get real scores; without one, the gate fails closed to human review by design.
 
+## See it live
+
+- **`demo.html`** — the product walkthrough (open in a browser): every stage, the prompt at each stage, the learning loop, the live chain, the data schema, and a time-flow simulation.
+- **`http://localhost:8788/live`** — live agent view: metrics, prompts, event trails, and a mock chat that runs messages through the agent.
+- **`http://localhost:5173/admin`** — admin console: counts, events, quarantine review, trace view.
+- **`POST /api/ingest {"text": "..."}`** — inject a message into the running agent and watch it move.
+- **`POST /api/quarantine/{event_id}/resolve`** — admin resolution → labeled example (learning loop writeback).
+
+Run the stack:
+
+```bash
+python3 -m uvicorn api.server:app --port 8788   # read API + live view (needs .env)
+pnpm --dir console run dev                      # admin console (SvelteKit)
+python3 -m app.main                             # fixture smoke test
+python3 -m app.swytchcode <event_id>            # live execution chain (Notion → Slack → Resend)
+```
+
 ## Status (honest, as of 26 Sep 2026)
 
-- **Working now:** agent core on fixtures with live Jev scores; SQLite ledger + checkpoints; fail-closed gate; outbox intents; Swytchcode live-proven for Resend + Notion; Discord routing verified (dry-run); Telegram bot live via Bot API.
-- **In progress:** deterministic signal expansion (4 → 12), memory store, Notion ledger/queue databases, platform ingress, Svelte console.
+- **Working now:** agent core (6 states, 11 signals, one batched Jev classify call) with live scores; SQLite ledger + checkpoints; fail-closed gate; append-only transition trail + `scripts/trace`; mock-chat ingest; quarantine resolve writeback; **live 3-provider Swytchcode chain — Notion report → Slack escalation → Resend "Beadle Agent" digest** (`docs/chain-run-proof.json`); admin console + live agent view; product walkthrough (`demo.html`).
+- **In progress:** memory store (FAQ / custom-knowledge retrieval), Telegram ingress, policy guardrails (3 rules in place with dry-run proofs — `docs/research-omp-policy-proofs.md`).
+- **Blocked (documented, not faked):** Discord via Swytchcode (OAuth 401, Swytchcode-side); Telegram via Swytchcode (bundle URL-placeholder bug) → runs on the direct Bot API and is never counted as Swytchcode-mediated.
 - **Not claimed:** calibration metrics, autonomous moderation at scale, or anything not present in this repo.
 
 ## Docs index
