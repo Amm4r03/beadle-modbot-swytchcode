@@ -1,0 +1,90 @@
+export const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8788';
+export const STREAM_URL = `${API_BASE}/api/stream`;
+export const DEFAULT_COMMUNITY = 'tg:maplenest';
+
+export interface Counts {
+	community_id: string;
+	observed: number;
+	by_band: Record<string, number>;
+	quarantined: number;
+	resolved: number;
+}
+
+export interface EventRow {
+	event_id: string;
+	platform: string;
+	received_at: string;
+	text: string | null;
+	author_id: string | null;
+	verdict: string | null;
+	band: string | null;
+	confidence: number | null;
+	reason: string | null;
+}
+
+export interface Transition {
+	from_state: string | null;
+	to_state: string;
+	reason_code: string | null;
+	occurred_at: string;
+}
+
+export interface SignalRun {
+	signal_version: string;
+	result_json: string;
+	evaluated_at: string;
+}
+
+export interface Decision {
+	verdict: string | null;
+	band: string | null;
+	confidence: number | null;
+	reason: string | null;
+	prompt_version: string | null;
+	prompt_hash: string | null;
+	model_id: string | null;
+	result_status: string | null;
+	decided_at: string;
+}
+
+export interface ActionIntent {
+	action_type: string;
+	status: string;
+	idempotency_key: string | null;
+	created_at: string;
+	updated_at: string;
+}
+
+export interface Override {
+	verdict: string;
+	reason_code: string | null;
+	resulting_action: string | null;
+	created_at: string;
+}
+
+export interface Trace {
+	event_id: string;
+	transitions: Transition[];
+	signals: SignalRun[];
+	decisions: Decision[];
+	actions: ActionIntent[];
+	overrides: Override[];
+}
+
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+	const res = await fetch(`${API_BASE}${path}`, { signal });
+	if (!res.ok) throw new Error(`API ${res.status} on ${path}`);
+	return (await res.json()) as T;
+}
+
+export const fetchCounts = (community: string, signal?: AbortSignal) =>
+	get<Counts>(`/api/communities/${encodeURIComponent(community)}/counts`, signal);
+
+export const fetchEvents = (community: string, limit = 50, signal?: AbortSignal) =>
+	get<EventRow[]>(
+		`/api/events?community_id=${encodeURIComponent(community)}&limit=${limit}`,
+		signal
+	);
+
+export const fetchTrace = (eventId: string, signal?: AbortSignal) =>
+	get<Trace>(`/api/trace/${encodeURIComponent(eventId)}`, signal);
