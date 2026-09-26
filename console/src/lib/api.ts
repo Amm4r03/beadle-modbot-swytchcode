@@ -12,6 +12,7 @@ export interface Counts {
 
 export interface EventRow {
 	event_id: string;
+	community_id?: string | null;
 	platform: string;
 	received_at: string;
 	text: string | null;
@@ -78,13 +79,23 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
 	if (!res.ok) throw new Error(`API ${res.status} on ${path}`);
 	return (await res.json()) as T;
 }
-
 export const fetchCounts = (community: string, signal?: AbortSignal) =>
 	get<Counts>(`/api/communities/${encodeURIComponent(community)}/counts`, signal);
 
-export const fetchEvents = (community: string, limit = 50, signal?: AbortSignal) =>
+export interface Community {
+	community_id: string;
+	events: number;
+	last_event: string | null;
+}
+
+export const fetchCommunities = (signal?: AbortSignal) =>
+	get<Community[]>('/api/communities', signal);
+
+export const fetchEvents = (community: string | null, limit = 50, signal?: AbortSignal) =>
 	get<EventRow[]>(
-		`/api/events?community_id=${encodeURIComponent(community)}&limit=${limit}`,
+		community
+			? `/api/events?community_id=${encodeURIComponent(community)}&limit=${limit}`
+			: `/api/events?limit=${limit}`,
 		signal
 	);
 
