@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""comms - read-only viewer for the herdr mailboxes in docs/herdr-comms/."""
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+MAILBOX_DIR = Path(__file__).resolve().parent.parent / "docs" / "herdr-comms"
+SEEN_FILE = MAILBOX_DIR / ".seen.json"
+
+HEADER_RE = re.compile(r"^##\s+(\d+)\s+·\s+(\S+)\s+·\s+([A-Z]+)")
+
+
+def parse_when(value):
+    raw = value.strip()
+    if not raw:
+        return datetime.min
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00").replace(" ", "T"))
+        if parsed.tzinfo is not None:
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed
+    except ValueError:
+        pass
+    try:
+        return datetime.strptime(raw[:10], "%Y-%m-%d")
+    except ValueError:
+        return datetime.min
+
+
+def clean_name(value):
+    value = re.sub(r"\s*\(.*?\)\s*$", "", value.strip())
+    return value.strip()
+
+
+def parse_file(path, prefix):
+    if not path.exists():
+        return []
+    messages = []
+    current = None
+    in_fence = False
+    for raw in path.read_text(errors="replace").splitlines():
+        line = raw.rstrip()
+        stripped = line.lstrip()
+        if stripped.startswith("```"):
+            in_fence = not in_fence
+            if current is not None:
+                current["lines"].append(raw)
+            continue
+        match = HEADER_RE.match(line) if not in_fence else None
+        if match:
+            if current is not None:
+                messages.append(finish(current, prefix, path))
+            current = {
+                "num": int(match.group(1)),
+                "when": match.group(2),
+                "type": match.group(3),
+                "lines": [],
+            }
+            continue
+        if current is not None:
+            current["lines"].append(raw)
+    if current is not None:
+        messages.append(finish(current, prefix, path))
+    return messages
+
+
+def finish(current, prefix, path):
+    sender = receiver = subject = ""
+    body_start = 0
+    for index, raw in enumerate(current["lines"]):
+        line = raw.strip()
+        if not sender:
+            match = re.match(r"^\*\*From:\*\*\s*(.+)$", line)
+            if match:
+                sender = clean_name(match.group(1))
+                body_start = index + 1
+                continue
+        if not receiver:
+            match = re.match(r"^\*\*To:\*\*\s*(.+)$", line)
+            if match:
+                receiver = clean_name(match.group(1))
+                body_start = index + 1
+                continue
+        if not subject:
+            match = re.match(r"^\*\*Subject:\*\*\s*(.+)$", line)
+            if match:
+                subject = match.group(1).strip()
+                body_start = index + 1
+                continue
+    body_lines = [line.rstrip() for line in current["lines"][body_start:]]
+    while body_lines and (not body_lines[0].strip() or body_lines[0].strip() == "---"):
+        body_lines.pop(0)
+    while body_lines and (not body_lines[-1].strip() or body_lines[-1].strip() == "---"):
+        body_lines.pop()
+    return {
+        "ref": f"{prefix}{current['num']}",
+        "num": current["num"],
+        "when": current["when"],
+        "sort_at": parse_when(current["when"]),
+        "type": current["type"],
+        "from": sender or "unknown",
+        "to": receiver or "unknown",
+        "subject": subject,
+        "body": "\n".join(body_lines).strip(),
+        "source": str(path),
+    }
+
+
+def prefix_for(path):
+    stem = path.name
+    return (stem[0] if stem else "?").upper()
+
+
+def load_messages():
+    if not MAILBOX_DIR.exists():
+        sys.exit(f"mailbox directory not found: {MAILBOX_DIR}")
+    messages = []
+    for path in sorted(MAILBOX_DIR.glob("*.md")):
+        messages.extend(parse_file(path, prefix_for(path)))
+    messages.sort(key=lambda m: (m["sort_at"], m["num"], m["ref"]))
+    for index, message in enumerate(messages):
+        message["index"] = index
+    return messages
+
+
+def load_seen():
+    if not SEEN_FILE.exists():
+        return {}
+    try:
+        return json.loads(SEEN_FILE.read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def save_seen(seen):
+    SEEN_FILE.write_text(json.dumps(seen, indent=2, sort_keys=True) + "\n")
+
+
+def find_ref(messages, ref):
+    ref = ref.upper()
+    for message in messages:
+        if message["ref"] == ref:
+            return message
+    matches = [m for m in messages if m["ref"].endswith(ref) or m["ref"] == ref.lstrip("DO")]
+    if len(matches) == 1:
+        return matches[0]
+    sys.exit(f"no unique message for ref {ref}")
+
+
+def apply_filters(messages, args):
+    result = messages
+    if getattr(args, "sender", None):
+        needle = args.sender.lower()
+        result = [m for m in result if needle in m["from"].lower()]
+    if getattr(args, "recipient", None):
+        needle = args.recipient.lower()
+        result = [m for m in result if needle in m["to"].lower()]
+    if getattr(args, "type", None):
+        types = {t.upper() for t in args.type}
+        result = [m for m in result if m["type"] in types]
+    if getattr(args, "since", None):
+        threshold = parse_when(args.since)
+        result = [m for m in result if m["sort_at"] >= threshold]
+    return result
+
+
+def message_row(message):
+    return {
+        "ref": message["ref"],
+        "when": message["when"],
+        "type": message["type"],
+        "from": message["from"],
+        "to": message["to"],
+        "subject": message["subject"],
+    }
+
+
+def cmd_log(messages, args):
+    rows = apply_filters(messages, args)
+    if args.limit:
+        rows = rows[-args.limit:]
+    if args.json:
+        print(json.dumps([message_row(m) for m in rows], indent=2))
+        return 0
+    if not rows:
+        print("no messages")
+        return 0
+    widths = {
+        key: max(len(key), max(len(str(message_row(m)[key])) for m in rows))
+        for key in ("ref", "when", "type", "from", "to")
+    }
+    print(
+        f"{'REF':<{widths['ref']}}  {'WHEN':<{widths['when']}}  {'TYPE':<{widths['type']}}  "
+        f"{'FROM':<{widths['from']}}  ->  {'TO':<{widths['to']}}  SUBJECT"
+    )
+    for message in rows:
+        row = message_row(message)
+        print(
+            f"{row['ref']:<{widths['ref']}}  {row['when']:<{widths['when']}}  {row['type']:<{widths['type']}}  "
+            f"{row['from']:<{widths['from']}}  ->  {row['to']:<{widths['to']}}  {row['subject']}"
+        )
+    return 0
+
+
+def cmd_show(messages, args):
+    message = find_ref(messages, args.ref)
+    if args.json:
+        print(json.dumps(message, indent=2, default=str))
+        return 0
+    print(f"ref:     {message['ref']}")
+    print(f"when:    {message['when']}")
+    print(f"type:    {message['type']}")
+    print(f"from:    {message['from']}")
+    print(f"to:      {message['to']}")
+    print(f"subject: {message['subject']}")
+    print(f"source:  {message['source']}")
+    print()
+    print(message["body"] if message["body"] else "(empty body)")
+    return 0
+
+
+def pending_requests(messages):
+    pending = []
+    for index, message in enumerate(messages):
+        if message["type"] not in ("REQ", "BLOCKED"):
+            continue
+        recipient = message["to"]
+        resolved = any(
+            later["from"] == recipient and later["type"] in ("ACK", "REPLY") and later["index"] > index
+            for later in messages
+        )
+        pending.append((message, resolved))
+    return pending
+
+
+def audit_summary(messages, include_resolved=False):
+    senders = {}
+    types = {}
+    for message in messages:
+        senders[message["from"]] = senders.get(message["from"], 0) + 1
+        types[message["type"]] = types.get(message["type"], 0) + 1
+    pending = [(m, r) for m, r in pending_requests(messages) if include_resolved or not r]
+    last = messages[-1] if messages else None
+    return {
+        "total": len(messages),
+        "by_sender": senders,
+        "by_type": types,
+        "last": message_row(last) if last else None,
+        "pending": [{"ref": m["ref"], "type": m["type"], "from": m["from"], "to": m["to"], "subject": m["subject"], "resolved": r} for m, r in pending],
+    }
+
+
+def cmd_digest(messages, args):
+    summary = audit_summary(messages, include_resolved=args.all)
+    if args.json:
+        print(json.dumps(summary, indent=2))
+        return 0
+    print(f"Mailbox directory: {MAILBOX_DIR}")
+    print(f"Total messages:    {summary['total']}")
+    print("By sender:         " + ", ".join(f"{k}={v}" for k, v in sorted(summary["by_sender"].items())))
+    print("By type:           " + ", ".join(f"{k}={v}" for k, v in sorted(summary["by_type"].items())))
+    if summary["last"]:
+        last = summary["last"]
+        print(f"Last activity:     {last['ref']} · {last['when']} · {last['type']} · {last['from']} -> {last['to']}")
+    if summary["pending"]:
+        label = "Pending requests" if not args.all else "Requests (open + resolved)"
+        print(f"\n{label}:")
+        for item in summary["pending"]:
+            state = "open" if not item["resolved"] else "resolved"
+            print(f"  {item['ref']} · {item['type']} · {item['from']} -> {item['to']} · {item['subject']} [{state}]")
+    else:
+        print("\nPending requests:  none")
+    return 0
+
+
+def cmd_unread(messages, args):
+    for_name = args.for_agent
+    cursor = load_seen().get(for_name)
+    start = 0
+    if cursor:
+        for message in messages:
+            if message["ref"] == cursor:
+                start = message["index"] + 1
+                break
+    rows = [m for m in messages if m["to"] == for_name and m["index"] >= start]
+    if args.json:
+        print(json.dumps([message_row(m) for m in rows], indent=2))
+        return 0
+    if not rows:
+        print(f"no unread messages for {for_name}")
+        return 0
+    for message in rows:
+        print(f"{message['ref']}  {message['when']}  {message['type']}  from {message['from']}: {message['subject']}")
+    return 0
+
+
+def cmd_mark_seen(messages, args):
+    message = find_ref(messages, args.ref)
+    seen = load_seen()
+    seen[args.for_agent] = message["ref"]
+    save_seen(seen)
+    print(f"{args.for_agent}: seen through {message['ref']}")
+    return 0
+
+
+def cmd_files(messages, args):
+    if not MAILBOX_DIR.exists():
+        sys.exit(f"mailbox directory not found: {MAILBOX_DIR}")
+    for path in sorted(MAILBOX_DIR.glob("*.md")):
+        count = sum(1 for m in messages if m["source"] == str(path))
+        print(f"{path}  messages={count}")
+    if SEEN_FILE.exists():
+        print(f"{SEEN_FILE}  {SEEN_FILE.read_text().strip()}")
+    return 0
+
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="comms", description="Read-only viewer for the herdr mailboxes.")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    log = sub.add_parser("log", help="list messages chronologically")
+    log.add_argument("--from", dest="sender", help="filter by sender substring")
+    log.add_argument("--to", dest="recipient", help="filter by recipient substring")
+    log.add_argument("--type", action="append", help="filter by type (repeatable)")
+    log.add_argument("--since", help="only messages at/after this date or datetime")
+    log.add_argument("--limit", type=int, help="show only the last N")
+    log.add_argument("--json", action="store_true")
+    log.set_defaults(func=cmd_log)
+
+    tail = sub.add_parser("tail", help="show the most recent messages")
+    tail.add_argument("-n", "--number", type=int, default=5, dest="limit")
+    tail.add_argument("--json", action="store_true")
+    tail.set_defaults(func=cmd_log, sender=None, recipient=None, type=None, since=None)
+
+    show = sub.add_parser("show", help="show one message in full")
+    show.add_argument("ref")
+    show.add_argument("--json", action="store_true")
+    show.set_defaults(func=cmd_show)
+
+    digest = sub.add_parser("digest", help="audit summary: counts, types, last activity, pending requests")
+    digest.add_argument("--all", action="store_true", help="include resolved requests")
+    digest.add_argument("--json", action="store_true")
+    digest.set_defaults(func=cmd_digest)
+
+    audit = sub.add_parser("audit", help="alias for digest --all")
+    audit.add_argument("--json", action="store_true")
+    audit.set_defaults(func=cmd_digest, all=True)
+
+    unread = sub.add_parser("unread", help="messages addressed to an agent, after the seen cursor")
+    unread.add_argument("--for", dest="for_agent", required=True)
+    unread.add_argument("--json", action="store_true")
+    unread.set_defaults(func=cmd_unread)
+
+    seen = sub.add_parser("mark-seen", help="advance an agent's seen cursor to a message ref")
+    seen.add_argument("ref")
+    seen.add_argument("--for", dest="for_agent", required=True)
+    seen.set_defaults(func=cmd_mark_seen)
+
+    files = sub.add_parser("files", help="show mailbox files and message counts")
+    files.set_defaults(func=cmd_files)
+
+    return parser
+
+
+def main():
+    parser = build_parser()
+    args = parser.parse_args()
+    messages = load_messages()
+    return args.func(messages, args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

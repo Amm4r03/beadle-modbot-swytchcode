@@ -1,0 +1,33 @@
+# --- secrets (never commit) ---
+.env
+.env.*
+!.env.example
+
+# --- local-only runtime, tooling, logs ---
+.swytchcode/
+data/
+bridge/
+*.log
+
+# --- local-only docs (personal info / internal comms) ---
+AGENTS.md
+docs/HANDOFF.md
+docs/agent-comms.md
+docs/hackathon-ground-rules.md
+docs/deepseek-research-1.md
+docs/muse-research-1.md
+docs/research-deepseek-framework-matrix.md
+docs/research-v2-final-candidates.md
+docs/herdr-comms/
+docs/archive/
+
+# --- python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# --- misc ---
+.DS_Store
