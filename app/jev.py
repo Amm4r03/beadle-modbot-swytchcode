@@ -6,7 +6,7 @@ import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
-PROMPT_VERSION = "classify-v0.2"
+PROMPT_VERSION = "classify-v0.3"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 
@@ -38,7 +38,7 @@ def classify_questions() -> dict:
     return {
         "solicitation": {
             "type": "noul",
-            "instructions": "Does the author seek to move readers toward an offer, payment, contact, external signup, or promotion? Judge the text and context, not whether it has a question mark. A genuine request for community help without a call to buy/contact/sign up is false.",
+            "instructions": "Does the author seek to move readers toward an offer, payment, contact, external signup, or promotion — the author promoting or directing others? If the author is instead asking for help or information for themselves (e.g., 'how do I join X'), answer false. A member warning others about a scam is not a scam.",
         },
         "question_shape": {
             "type": "noul",
@@ -121,11 +121,13 @@ def check_answerable(question: str, passages: list[dict]) -> dict:
         return {"answerable_p": None, "model_id": MODEL, "error": f"{type(error).__name__}: {str(error)[:120]}"}
 
 
-def reduce_gate(jev_result: dict) -> dict:
+def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     scores = jev_result.get("scores", {})
     scam_p = scores.get("solicitation")
     question_p = scores.get("question_shape")
     review_p = scores.get("needs_human_review")
+    knowledge = knowledge or {}
+    knowledge_ok = (knowledge.get("answerable_p") or 0) >= 0.70 and (knowledge.get("internal_p") or 0) >= 0.50
     if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None:
         return {
             "verdict": "review",
@@ -138,9 +140,13 @@ def reduce_gate(jev_result: dict) -> dict:
     if scam_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: solicitation probability {scam_p:.2f} at/above 0.70 - quarantine for review"
-    elif question_p >= 0.85 and scam_p <= 0.10 and review_p < 0.50:
+    elif question_p >= 0.85 and review_p < 0.50 and (scam_p <= 0.10 or knowledge_ok):
         verdict, band = "answer", "AUTO"
-        reason = f"gate: genuine question probability {question_p:.2f} at/above 0.85, solicitation {scam_p:.2f} at/below 0.10 - answer"
+        reason = (
+            f"gate: genuine question probability {question_p:.2f} at/above 0.85, solicitation {scam_p:.2f} at/below 0.10 - answer"
+            if scam_p <= 0.10
+            else f"gate: genuine question {question_p:.2f} at/above 0.85 and answerable from the knowledge base - answer"
+        )
     elif review_p >= 0.50 or question_p >= 0.50 or scam_p >= 0.40:
         verdict, band = "review", "DRAFT"
         reason = f"gate: uncertain (solicitation {scam_p:.2f}, question {question_p:.2f}, review {review_p:.2f}) - send to admin"
