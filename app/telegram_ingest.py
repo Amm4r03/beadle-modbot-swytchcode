@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from app import db, swytchcode
+from app import db, escalation, swytchcode
 from app.graph import build_graph
 from app.telegram_direct import TelegramDirect
 
@@ -65,6 +65,12 @@ def main() -> None:
                     print("   ledger row written")
             except Exception as error:
                 print(f"   execution wiring failed: {error}")
+            try:
+                alert = escalation.check(event["event_id"], event["text"], band or "?", decision.get("verdict") or "?", float(decision.get("confidence") or 0.0), decision.get("reason", ""))
+                if alert:
+                    print(f"   escalation alert logged ({alert['trigger']}) + Slack notified")
+            except Exception as error:
+                print(f"   escalation check failed: {error}")
             try:
                 if band == "AUTO" and draft.get("text"):
                     bot.send_message(event["channel_id"], draft["text"], reply_to_message_id=reply_to)
