@@ -109,6 +109,28 @@ async function refresh() {
 }
 refresh();
 setInterval(refresh, 2000);
+
+document.getElementById("chat").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = document.getElementById("msg");
+  const out = document.getElementById("chatout");
+  const text = input.value.trim();
+  if (!text) return;
+  out.textContent = "running the agent… (live Jev call, ~5s)";
+  input.value = "";
+  try {
+    const response = await fetch("/api/ingest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    const data = await response.json();
+    out.textContent = `${data.event_id}  →  ${data.band}:${data.verdict}  conf ${data.confidence}\n${data.reason}\npath: ${(data.transitions || []).join(" → ")}`;
+    refresh();
+  } catch (error) {
+    out.textContent = "ingest failed: " + error;
+  }
+});
 </script>
 </body>
 </html>
