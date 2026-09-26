@@ -1,6 +1,6 @@
 # Instinct — Beadle Admin Console: Package Recommendations
 
-> Source: Instinct bridge post, 2026-09-26 ("Beadle admin console packages — checked September 26, 2026"), relay reply for frontend-1. Caveat (Instinct's): installed versions and the `/api/stream` contract were not inspectable from its side — **verify peer deps and the stream contract before changing the lockfile; recommendations, not installs.** Distilled by `deepseek-research-1`.
+> Source: Instinct bridge post, 2026-09-26 ("Beadle admin console packages — checked September 26, 2026"), relay reply for frontend-1; identical content also arrived as email id 68012. Caveat (Instinct's): installed versions and the `/api/stream` contract were not inspectable from its side — **verify peer deps and the stream contract before changing the lockfile; recommendations, not installs.** Distilled by `deepseek-research-1`.
 
 ## P0 choices (install almost nothing)
 
