@@ -128,7 +128,7 @@ def classify(state: AgentState) -> AgentState:
 def gate(state: AgentState) -> AgentState:
     event = state["event"]
     jev_result = state.get("jev", {})
-    verdict = jev.reduce_gate(jev_result, state.get("knowledge"), state.get("signals"))
+    verdict = jev.reduce_gate(jev_result, state.get("knowledge"))
     decision = {
         "event_id": event["event_id"],
         "policy_version": POLICY_VERSION,

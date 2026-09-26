@@ -6,7 +6,7 @@ import httpx
 
 BASE_URL = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 MODEL = os.environ.get("JEV_MODEL", "jev-1.13.0")
-PROMPT_VERSION = "classify-v0.5"
+PROMPT_VERSION = "classify-v0.6"
 NORM_VERSION = "norms-v0.1"
 EXAMPLE_SNAPSHOT_ID = "examples-empty-v0.1"
 KNOWLEDGE_PROMPT_VERSION = "knowledge-v0.2"
@@ -51,7 +51,7 @@ def classify_questions() -> dict:
         },
         "threat_or_harm": {
             "type": "noul",
-            "instructions": "Does the message threaten violence, destruction, or serious harm to people, the community, or its property - including threats to delete, destroy, or shut the community down? Discussing hypotheticals, reporting a threat, or warning others is not a threat.",
+            "instructions": "Does the message express intent or willingness to harm, attack, delete, destroy, or shut down the community, its members, or their accounts - regardless of tone, slang, or whether it sounds like a joke? A member reporting or warning about someone else's threat is not a threat.",
         },
     }
 
@@ -127,7 +127,7 @@ def check_answerable(question: str, passages: list[dict]) -> dict:
         return {"answerable_p": None, "model_id": MODEL, "error": f"{type(error).__name__}: {str(error)[:120]}"}
 
 
-def reduce_gate(jev_result: dict, knowledge: dict | None = None, signals: list | None = None) -> dict:
+def reduce_gate(jev_result: dict, knowledge: dict | None = None) -> dict:
     scores = jev_result.get("scores", {})
     scam_p = scores.get("solicitation")
     question_p = scores.get("question_shape")
@@ -135,7 +135,6 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None, signals: list |
     threat_p = scores.get("threat_or_harm")
     knowledge = knowledge or {}
     knowledge_ok = (knowledge.get("answerable_p") or 0) >= 0.70 and (knowledge.get("internal_p") or 0) >= 0.50
-    rule_threat = any(s.get("id") == "threat_terms" and s.get("value") == "TRUE" for s in (signals or []))
     if jev_result.get("degraded") or scam_p is None or question_p is None or review_p is None or threat_p is None:
         return {
             "verdict": "review",
@@ -145,10 +144,7 @@ def reduce_gate(jev_result: dict, knowledge: dict | None = None, signals: list |
             "scores": scores,
             "model_id": jev_result.get("model_id"),
         }
-    if rule_threat:
-        verdict, band = "quarantine", "DRAFT"
-        reason = "gate: threat language detected (threat_terms) - quarantine for review"
-    elif threat_p >= 0.70:
+    if threat_p >= 0.70:
         verdict, band = "quarantine", "DRAFT"
         reason = f"gate: threat/harm probability {threat_p:.2f} at/above 0.70 - quarantine for review"
     elif scam_p >= 0.70:

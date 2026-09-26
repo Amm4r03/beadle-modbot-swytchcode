@@ -21,7 +21,6 @@ BLOCKED_DOMAINS = frozenset(
 RATE_WINDOW_MINUTES = 10
 RATE_BURST_THRESHOLD = 5
 DUPLICATE_THRESHOLD = 2
-THREAT_RE = re.compile(r"\b(delete|destroy|shut\s?down|burn|kill|nuke|raid|dox|doxx?)\b[^.!?]{0,30}\b(community|group|server|channel|chat|account|accounts|you|member|members|user|users)\b", re.I)
 
 
 def _domains(text: str) -> list[str]:
@@ -155,17 +154,6 @@ def known_trust_or_override(event: Event, context: dict | None = None) -> Signal
     return _result("known_trust_or_override", value, "COMPLETE", [{"field": "member_trust", "value": trust}], started)
 
 
-def threat_terms(event: Event, _context: dict | None = None) -> SignalResult:
-    started = time.perf_counter()
-    text = event.get("text")
-    if text is None:
-        return _result("threat_terms", "UNKNOWN", "MISSING", [], started)
-    match = THREAT_RE.search(text)
-    value = "TRUE" if match else "FALSE"
-    evidence = [{"field": "pattern", "value": match.group(0)[:80]}] if match else []
-    return _result("threat_terms", value, "COMPLETE", evidence, started)
-
-
 def build_context(event: Event) -> dict:
     context: dict = {}
     occurred = event.get("occurred_at")
@@ -203,7 +191,6 @@ ALL_SIGNALS = (
     duplicate_payload,
     domain_allow_or_block,
     known_trust_or_override,
-    threat_terms,
     solicitation,
     question_shape,
 )
