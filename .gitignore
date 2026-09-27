@@ -47,3 +47,5 @@ venv/
 
 # local man-page cache from himalaya manual lookups (regenerable)
 template/
+
+docs/TOPIC-SELECTION.md
