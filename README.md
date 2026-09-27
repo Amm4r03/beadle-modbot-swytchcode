@@ -153,6 +153,9 @@ python3 -m app.swytchcode <event_id>            # live execution chain (Notion �
 - `docs/TECH-STACK.md` — stack pins per stage
 - `docs/DECISION-REGISTER.md` — every product/engineering decision with status
 - `docs/BUILD-PLAN-TODAY.md` — the day's plan of attack
+- `docs/DEPLOYMENT.md` — how to run everything + the deployment path and next steps
+- `docs/TOPIC-SELECTION.md` — the process that chose this project (60 → 12 → 6 → 1)
+- `docs/ARCHITECTURE.md` — standalone architecture diagram
 - `docs/brainstorm/` — product and architecture threads
 - `docs/research-*.md` — research packs (signals, memory, token budget, competition, gate wiring)
 
